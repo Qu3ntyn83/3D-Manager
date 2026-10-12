@@ -19,7 +19,17 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 - **RFID-Tags frei zuordnen**: Ein Tag ist nur eine ID – ein umgesetzter Bambu-Tag „PLA Basic Schwarz“ kann z. B. für eine Sunlu PLA+ Pink stehen. Restmenge und Verbrauch laufen dann auf diese Spule. Zuordnung per **Volltextsuche**
 - **Bambu Filament Manager** (Cloud-Spulenbibliothek von Bambu Studio/Handy) wird gelesen und mit den AMS-Tags zusammengeführt
 - **Druckerstatus**: Fortschritt, Schicht, Restzeit, Fertig-Uhrzeit, Temperaturen (Düse/Bett/Kammer), aktives Filament, Lüfter, HMS-Fehler im Klartext (deutsch)
-- **Druckhistorie** mit Filamentverbrauch je Druck und Spule
+- **Grammgenauer Verbrauch** je Druck aus den Bambu-Cloud-Druckaufträgen (Slicer-Gramm pro AMS-Slot) – korrigiert die AMS-Schätzung, abgebrochene Drucke anteilig; Slots ohne Tag per Klick einer Spule zuordnen
+- **Druckhistorie** mit Verbrauch und Kosten je Druck
+
+**Spulen, Kosten & Planung**
+- **Einzelne Spulen** (S0001 …) statt nur Stückzahl: Status OVP/offen/leer, Restgewicht, Öffnungs- und Trocknungsdatum, Preis, Lagerort; RFID-Tag hängt an der konkreten Spule
+- **Wiegen** mit Tara (Leerspule wird je Sorte gemerkt)
+- **Kosten**: Preis je Spule/kg, Kosten je Druck (Material + Strom), Lagerwert
+- **Übersicht**: Einkaufsliste (Mindestbestand/fast leer, gruppiert nach Shop, „bestellt“-Markierung), Trocknungs-Hinweise (offene Liegezeit je Material, AMS-Feuchte), Verbrauch 12 Monate, nach Material, Top-Farben, „Reicht noch …“-Prognose
+- **Materialprofile**: Düsen-/Betttemperatur, Trocknung, max. offene Tage je Familie (PLA, PETG, ABS …) mit Überschreibung pro Sorte
+- **QR-Etiketten** (A4-Bögen 3×8 / 2×7, Etikettenrollen 62×29 / 50×30) und **Scanner** im Browser – Scan öffnet die Spule, Inventur per Scan
+- **Automatische Backups** (täglich, Aufbewahrung einstellbar, Download in den Einstellungen)
 
 **Bedienung**
 - Dark Mode (Standard), Hell, System
@@ -30,6 +40,8 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 |---|---|---|---|
 | ![Drucker](docs/screenshots/drucker.png) | ![AMS](docs/screenshots/ams.png) | ![Tags](docs/screenshots/rfid-tags.png) | ![Mobil](docs/screenshots/mobil-inventur.png) |
 
+![Übersicht](docs/screenshots/uebersicht.png)
+
 ## Installation
 
 Voraussetzung: Docker mit Compose.
@@ -37,23 +49,34 @@ Voraussetzung: Docker mit Compose.
 ```bash
 git clone https://github.com/Qu3ntyn83/3D-Manager.git
 cd 3D-Manager
-docker compose up -d --build
+docker compose pull      # fertiges Image von ghcr.io (amd64/arm64)
+docker compose up -d     # oder selbst bauen: docker compose up -d --build
 ```
 
 Danach erreichbar unter `http://<docker-host>:8095`.
 
-- Daten liegen in `./data` (`inventar.db` + `uploads/` für Fotos) → ins Backup aufnehmen.
+- Daten liegen in `./data` (`inventar.db` + `uploads/` für Fotos).
+- **Backups**: täglich um 3 Uhr nach `./data/backups` (14 Tage, mind. 3 Stück) – Zeit/Aufbewahrung unter ⋯ → Einstellungen. Ziel per `BACKUP_DIR` z. B. auf ein NAS legen. Wiederherstellen: Container stoppen, Archiv in `./data` entpacken, starten.
+- Der Bambu-Farbkatalog (AGPL) ist nicht im Repository; er wird beim Build bzw. beim ersten Start von GitHub geladen.
+- **Kamera-Scanner** braucht HTTPS (Reverse Proxy) – unter `http://` geht nur die Eingabe des Codes von Hand. Für die QR-Etiketten unter Einstellungen die öffentliche Adresse eintragen.
 - `SEED=1` in der `docker-compose.yml` füllt eine leere Datenbank beim ersten Start mit einem Beispiel-Inventar.
 - `BAMBU_MOCK=/app/mock_spools.json` zeigt Beispiel-Spulen der Cloud-Bibliothek ohne Bambu-Account.
+
+**Umstieg vom alten Paket „3D Management“** (Daten, Fotos, RFID-Zuordnungen und DNS-Einstellung werden übernommen, das alte Verzeichnis bleibt als Rückweg liegen):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Qu3ntyn83/3D-Manager/main/scripts/migrate-from-3d-management.sh -o migrate.sh
+sudo bash migrate.sh
+```
 
 **Update**
 
 ```bash
 git pull
-docker compose up -d --build
+docker compose pull && docker compose up -d    # bzw. docker compose up -d --build
 ```
 
-Neue Datenbankfelder werden beim Start automatisch angelegt; vorhandene Daten bleiben erhalten.
+Neue Datenbankfelder werden beim Start automatisch angelegt; vorhandene Daten bleiben erhalten. Beim ersten Start mit Spulen-Verwaltung werden aus der Stückzahl automatisch einzelne Spulen erzeugt.
 
 ## Drucker verbinden
 
@@ -108,7 +131,14 @@ Ein Tag ist nur eine ID. Was Bambu über den Tag meldet (Material/Farbe), wird n
 | GET | `/api/ams/live` | AMS-Slots inkl. zugeordneter Spulen |
 | GET | `/api/ams/rfid` | alle RFID-Tags (AMS + Cloud) |
 | POST | `/api/ams/rfid/<tag>/link` | Tag zuordnen `{"filament_id": 12}` |
-| GET | `/api/ams/jobs` | Druckhistorie mit Verbrauch |
+| GET | `/api/ams/jobs` | Druckhistorie mit Verbrauch und Kosten |
+| GET/POST | `/api/units` | einzelne Spulen |
+| POST | `/api/units/<id>/weigh` | wiegen `{"gross_g": 812, "tare_g": 250}` |
+| POST | `/api/units/<id>/open`, `/empty`, `/dry` | Spule öffnen / leer / getrocknet |
+| POST | `/api/jobs/<id>/assign` | Slicer-Gramm eines Slots ohne Tag zuordnen |
+| GET | `/api/stats`, `/api/shopping`, `/api/drying` | Statistik, Einkaufsliste, Trocknung |
+| GET/PUT | `/api/settings`, `/api/profiles` | Einstellungen, Materialprofile |
+| GET/POST | `/api/backups` | Backups auflisten / jetzt sichern |
 | GET | `/api/export`, `/api/export.csv?kind=filaments` | Backup / CSV |
 
 Damit lassen sich z. B. in Home Assistant per `rest`-Sensor Bestand, AMS-Belegung und Druckerstatus anzeigen.
@@ -124,10 +154,18 @@ app/
   printer_status.py   Status-Dekodierung, HMS-Texte, Job-Tracking
   bambu.py            Bambu-Cloud: Login, Filament-Manager-Sync
   bambu_cloud.py      HTTP-Client für die Bambu-Cloud
+  tasks.py            Druckaufträge aus der Cloud, Slicer-Gramm buchen
+  units.py            einzelne Spulen, Verbrauchsprotokoll
+  insights.py         Einstellungen, Kosten, Profile, Einkaufsliste, Statistik
+  backup.py           automatische Backups
+  catalog_fetch.py    Bambu-Farbkatalog laden
   catalog/            Farbkataloge (Bambu, Community)
   hms/                HMS-Fehlertexte (de/en)
   static/             Oberfläche, PWA
+tests/                pytest (läuft in GitHub Actions)
 ```
+
+Tests lokal: `pip install -r requirements.txt pytest && python -m pytest -q tests`. GitHub Actions testet jeden Push/PR und baut bei `main` und Tags `v*` das Image `ghcr.io/qu3ntyn83/3d-manager`.
 
 ## Haftungsausschluss
 

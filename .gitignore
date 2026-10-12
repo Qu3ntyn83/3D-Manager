@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 *.zip
 .env
+app/catalog/bambu.json
+docker-compose.override.yml

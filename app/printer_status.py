@@ -169,7 +169,8 @@ def derive(raw: dict, model: str | None, tray_now) -> dict:
 JOBS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS print_jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, printer_id INTEGER, job_key TEXT, name TEXT,
-  started TEXT, ended TEXT, result TEXT, layers INTEGER, snapshot TEXT, usage TEXT
+  started TEXT, ended TEXT, result TEXT, layers INTEGER, snapshot TEXT, usage TEXT,
+  slots TEXT, end_percent INTEGER, last_percent INTEGER, task_id INTEGER, usage_src TEXT
 );
 CREATE INDEX IF NOT EXISTS print_jobs_printer ON print_jobs(printer_id, started);
 """
@@ -195,21 +196,38 @@ def track_job(c, printer_id: int, raw: dict, ts: str):
     running = state in ("RUNNING", "PREPARE", "PAUSE")
     if running and key:
         if open_job and open_job["job_key"] == key:
+            if raw.get("mc_percent") is not None:
+                c.execute("UPDATE print_jobs SET last_percent=? WHERE id=?", (raw.get("mc_percent"), open_job["id"]))
             return
         if open_job:
             _close(c, open_job, "abgebrochen", ts)
         snap = {r["tag_key"]: r["consumed_g"] or 0 for r in c.execute("SELECT tag_key, consumed_g FROM tags")}
-        c.execute("INSERT INTO print_jobs (printer_id, job_key, name, started, layers, snapshot) VALUES (?,?,?,?,?,?)",
-                  (printer_id, key, raw.get("subtask_name") or key, ts, raw.get("total_layer_num"), json.dumps(snap)))
+        c.execute("INSERT INTO print_jobs (printer_id, job_key, name, started, layers, snapshot, slots) VALUES (?,?,?,?,?,?,?)",
+                  (printer_id, key, raw.get("subtask_name") or key, ts, raw.get("total_layer_num"), json.dumps(snap),
+                   json.dumps(slot_snapshot(c, printer_id))))
     elif open_job and state in ("FINISH", "FAILED", "IDLE"):
         _close(c, open_job, {"FINISH": "fertig", "FAILED": "fehlgeschlagen"}.get(state, "beendet"), ts)
+
+
+def slot_snapshot(c, printer_id) -> dict:
+    """Welche Spule steckt bei Druckstart in welchem Slot (für die spätere Zuordnung der Slicer-Gramm)."""
+    out = {}
+    for t in c.execute("""SELECT a.ams_id, a.tray_id, a.tag_key, a.empty, g.unit_id, g.filament_ref FROM ams_trays a
+                          LEFT JOIN tags g ON g.tag_key=a.tag_key WHERE a.printer_id=?""", (printer_id,)):
+        if t["empty"]:
+            continue
+        out[f"{t['ams_id']}:{t['tray_id']}"] = {"tag_key": t["tag_key"], "unit_id": t["unit_id"], "filament_ref": t["filament_ref"]}
+    return out
 
 
 def _close(c, job, result, ts):
     snap = json.loads(job["snapshot"] or "{}")
     usage = []
-    for r in c.execute("SELECT tag_key, consumed_g, filament_ref FROM tags"):
+    for r in c.execute("SELECT tag_key, consumed_g, filament_ref, unit_id, ams_id, tray_id FROM tags"):
         d = (r["consumed_g"] or 0) - snap.get(r["tag_key"], 0)
         if d >= 0.5:
-            usage.append({"tag_key": r["tag_key"], "grams": round(d, 1), "filament_ref": r["filament_ref"]})
-    c.execute("UPDATE print_jobs SET ended=?, result=?, usage=? WHERE id=?", (ts, result, json.dumps(usage), job["id"]))
+            usage.append({"tag_key": r["tag_key"], "grams": round(d, 1), "ams_g": round(d, 1), "filament_ref": r["filament_ref"],
+                          "unit_id": r["unit_id"], "slot": [r["ams_id"], r["tray_id"]], "source": "ams"})
+    end_pct = 100 if result == "fertig" else job["last_percent"]
+    c.execute("UPDATE print_jobs SET ended=?, result=?, usage=?, usage_src='ams', end_percent=? WHERE id=?",
+              (ts, result, json.dumps(usage), end_pct, job["id"]))

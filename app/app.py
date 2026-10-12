@@ -21,9 +21,10 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 FIL_FIELDS = ["brand", "material", "color_name", "official_name", "sku", "qty", "sealed", "spool",
               "refill", "sample", "last_check", "location", "notes", "colors", "pattern",
-              "swatch_source", "image", "weight_g", "min_qty", "buy_url", "manufacturer_url"]
+              "swatch_source", "image", "weight_g", "min_qty", "buy_url", "manufacturer_url",
+              "net_weight_g", "tare_g", "price", "profile", "ordered_at"]
 MAT_FIELDS = ["qty", "category", "description", "thickness", "location", "notes", "min_qty",
-              "kind", "manufacturer", "manufacturer_url", "buy_url"]
+              "kind", "manufacturer", "manufacturer_url", "buy_url", "price", "ordered_at"]
 BOOL = {"sealed", "spool", "refill", "sample"}
 
 SCHEMA = """
@@ -72,7 +73,9 @@ def init_db():
     conn.executescript(SCHEMA)
     # Migrationen (neue Spalten in bestehenden Datenbanken)
     for table, cols in (("materials", {"kind": "TEXT DEFAULT 'material'", "manufacturer": "TEXT", "manufacturer_url": "TEXT", "buy_url": "TEXT"}),
-                        ("filaments", {"buy_url": "TEXT", "manufacturer_url": "TEXT"})):
+                        ("materials", {"price": "REAL", "ordered_at": "TEXT"}),
+                        ("filaments", {"buy_url": "TEXT", "manufacturer_url": "TEXT", "net_weight_g": "INTEGER DEFAULT 1000",
+                                       "tare_g": "INTEGER", "price": "REAL", "profile": "TEXT", "ordered_at": "TEXT"})):
         have = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
         for col, typ in cols.items():
             if col not in have:
@@ -97,6 +100,13 @@ def _clean(payload, fields):
             v = 1 if v in (True, 1, "1", "true", "ja") else 0
         elif f == "colors":
             v = json.dumps(v if isinstance(v, list) else [v])
+        elif f == "profile":
+            v = json.dumps(v) if isinstance(v, dict) else (v or None)
+        elif f in ("price", "net_weight_g", "tare_g"):
+            try:
+                v = None if v in ("", None) else (float(v) if f == "price" else int(float(v)))
+            except (TypeError, ValueError):
+                v = None
         elif f in ("qty", "weight_g", "min_qty"):
             v = None if v in ("", None) else int(v)
         elif isinstance(v, str):
@@ -111,6 +121,10 @@ def _row(r, kind):
         d["colors"] = json.loads(d["colors"] or "[]")
         for b in BOOL:
             d[b] = bool(d[b])
+        try:
+            d["profile"] = json.loads(d.get("profile") or "{}")
+        except (TypeError, ValueError):
+            d["profile"] = {}
     return d
 
 
@@ -118,9 +132,14 @@ def _import(conn, data, replace=False):
     if replace:
         conn.execute("DELETE FROM filaments")
         conn.execute("DELETE FROM materials")
+    unit_cols = ("status", "initial_g", "remaining_g", "opened_at", "emptied_at", "dried_at", "price", "purchased_at", "shop", "location", "notes")
     for f in data.get("filaments", []):
         c = _clean(f, FIL_FIELDS)
-        conn.execute(f"INSERT INTO filaments ({','.join(c)}) VALUES ({','.join('?' * len(c))})", list(c.values()))
+        cur = conn.execute(f"INSERT INTO filaments ({','.join(c)}) VALUES ({','.join('?' * len(c))})", list(c.values()))
+        for u in f.get("units") or []:
+            vals = {k: u.get(k) for k in unit_cols if k in u}
+            vals.update(filament_id=cur.lastrowid, remaining_src="manual", created_at=date.today().isoformat())
+            conn.execute(f"INSERT INTO spool_units ({','.join(vals)}) VALUES ({','.join('?' * len(vals))})", list(vals.values()))
     for m in data.get("materials", []):
         c = _clean(m, MAT_FIELDS)
         conn.execute(f"INSERT INTO materials ({','.join(c)}) VALUES ({','.join('?' * len(c))})", list(c.values()))
@@ -133,15 +152,21 @@ def _crud(table, fields, kind):
         out = [_row(r, kind) for r in rows]
         if table == "filaments":
             linked, tg = linked_spools(), linked_tags()
+            with uconn() as c:
+                ub = units.units_by_filament(c)
             for f in out:
                 f["spools"] = linked.get(f["id"], [])
                 f["tags"] = tg.get(f["id"], [])
+                f["units"] = ub.get(f["id"], [])
         return jsonify(out)
 
     def create():
         c = _clean(request.get_json(force=True), fields)
         cur = db().execute(f"INSERT INTO {table} ({','.join(c)}) VALUES ({','.join('?' * len(c))})", list(c.values()))
         db().commit()
+        if table == "filaments":
+            with uconn() as uc:
+                units.reconcile_qty(uc, cur.lastrowid, c.get("qty", 1))
         return get(cur.lastrowid), 201
 
     def get(item_id):
@@ -152,13 +177,19 @@ def _crud(table, fields, kind):
         if table == "filaments":
             d["spools"] = linked_spools(item_id).get(item_id, [])
             d["tags"] = linked_tags().get(item_id, [])
+            with uconn() as c:
+                d["units"] = units.units_by_filament(c).get(item_id, [])
         return jsonify(d)
 
     def update(item_id):
         c = _clean(request.get_json(force=True), fields)
+        qty = c.pop("qty", None) if table == "filaments" else None
         if c:
             db().execute(f"UPDATE {table} SET {','.join(k + '=?' for k in c)} WHERE id=?", [*c.values(), item_id])
             db().commit()
+        if qty is not None:
+            with uconn() as uc:
+                units.reconcile_qty(uc, item_id, qty)
         return get(item_id)
 
     def delete(item_id):
@@ -168,15 +199,23 @@ def _crud(table, fields, kind):
                 (UPLOAD_DIR / r["image"]).unlink(missing_ok=True)
         if table == "filaments":
             db().execute("UPDATE spools SET filament_ref=NULL, link_mode=NULL WHERE filament_ref=?", (item_id,))
-            db().execute("UPDATE tags SET filament_ref=NULL, link_mode=NULL WHERE filament_ref=?", (item_id,))
+            db().execute("UPDATE tags SET filament_ref=NULL, link_mode=NULL, unit_id=NULL WHERE filament_ref=?", (item_id,))
+            db().execute("DELETE FROM unit_log WHERE unit_id IN (SELECT id FROM spool_units WHERE filament_id=?)", (item_id,))
+            db().execute("DELETE FROM spool_units WHERE filament_id=?", (item_id,))
         db().execute(f"DELETE FROM {table} WHERE id=?", (item_id,))
         db().commit()
         return "", 204
 
     def adjust(item_id):
         delta = int(request.get_json(force=True).get("delta", 0))
-        db().execute(f"UPDATE {table} SET qty = MAX(0, qty + ?) WHERE id=?", (delta, item_id))
-        db().commit()
+        if table == "filaments":
+            with uconn() as uc:
+                units.adjust_filament(uc, item_id, delta)
+        else:
+            db().execute(f"UPDATE {table} SET qty = MAX(0, qty + ?) WHERE id=?", (delta, item_id))
+            if delta > 0:
+                db().execute(f"UPDATE {table} SET ordered_at=NULL WHERE id=?", (item_id,))
+            db().commit()
         return get(item_id)
 
     base = f"/api/{table}"
@@ -200,7 +239,9 @@ def catalog():
     global _CATALOG
     if _CATALOG is None:
         _CATALOG = []
-        for name in ("bambu.json", "community.json", "custom.json"):
+        from bambu import bambu_catalog
+        _CATALOG += bambu_catalog()
+        for name in ("community.json", "custom.json"):
             for p in (BASE / "catalog" / name, DATA_DIR / name):
                 if p.exists():
                     _CATALOG += json.loads(p.read_text(encoding="utf-8"))
@@ -288,6 +329,9 @@ def export_json():
         "filaments": [_row(r, "f") for r in db().execute("SELECT * FROM filaments ORDER BY id")],
         "materials": [_row(r, "m") for r in db().execute("SELECT * FROM materials ORDER BY id")],
     }
+    unit_cols = ("status", "initial_g", "remaining_g", "opened_at", "emptied_at", "dried_at", "price", "purchased_at", "shop", "location", "notes")
+    for f in data["filaments"]:
+        f["units"] = [{k: r[k] for k in unit_cols} for r in db().execute("SELECT * FROM spool_units WHERE filament_id=? ORDER BY id", (f["id"],))]
     for f in data["filaments"] + data["materials"]:
         f.pop("id", None)
     return Response(json.dumps(data, ensure_ascii=False, indent=1), mimetype="application/json",
@@ -316,14 +360,31 @@ def import_json():
     data = request.get_json(force=True)
     replace = request.args.get("replace") == "1"
     conn = db()
+    if replace:
+        conn.execute("DELETE FROM spool_units")
     _import(conn, data, replace=replace)
     conn.commit()
+    with uconn() as uc:
+        units.migrate(uc)
     return jsonify({"ok": True})
 
 
 @app.get("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
+
+
+@app.get("/s/<int:uid>")
+def short_unit(uid):
+    """Ziel der QR-Codes auf Spulen-Etiketten."""
+    from flask import redirect
+    return redirect(f"/?unit={uid}")
+
+
+@app.get("/f/<int:fid>")
+def short_filament(fid):
+    from flask import redirect
+    return redirect(f"/?fil={fid}")
 
 
 @app.get("/manifest.webmanifest")
@@ -346,11 +407,25 @@ def health():
 
 from bambu import bp as bambu_bp, linked_spools, start_scheduler  # noqa: E402
 from ams import bp as ams_bp, linked_tags, start as start_ams  # noqa: E402
+from bambu import conn as uconn  # noqa: E402
+import units  # noqa: E402
+import insights  # noqa: E402
+import tasks  # noqa: E402
+import backup  # noqa: E402
+from bambu import ensure_catalog  # noqa: E402
 
 app.register_blueprint(bambu_bp)
 app.register_blueprint(ams_bp)
+app.register_blueprint(units.bp)
+app.register_blueprint(insights.bp)
+app.register_blueprint(tasks.bp)
+app.register_blueprint(backup.bp)
 init_db()
 start_ams(app)
+units.init_schema()
+tasks.init_schema()
+ensure_catalog(app)
+backup.scheduler()
 start_scheduler(app)
 
 if __name__ == "__main__":

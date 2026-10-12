@@ -1,7 +1,8 @@
 services:
   3d-manager:
+    # Fertiges Image (amd64/arm64) aus GitHub Actions – oder selbst bauen mit "build: ."
+    image: ghcr.io/qu3ntyn83/3d-manager:latest
     build: .
-    image: 3d-manager:latest
     container_name: 3d-manager
     restart: unless-stopped
     ports:
@@ -10,6 +11,8 @@ services:
       - TZ=Europe/Berlin
       # SEED=1 → leere Datenbank beim ersten Start mit Beispiel-Inventar füllen
       - SEED=0
+      # Backups landen standardmäßig in ./data/backups – oder z. B. auf einem NAS-Share:
+      # - BACKUP_DIR=/backups
       # Demo ohne Bambu-Account: Beispiel-Spulen der Cloud-Bibliothek laden
       # - BAMBU_MOCK=/app/mock_spools.json
     # Falls der Container keine Namen auflösen kann ("Could not resolve host"):
@@ -18,3 +21,4 @@ services:
     #   - 1.1.1.1
     volumes:
       - ./data:/data
+      # - /mnt/nas/3d-manager-backups:/backups
