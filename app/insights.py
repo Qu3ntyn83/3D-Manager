@@ -292,7 +292,7 @@ def drying():
 
 
 # ---------------------------------------------------------------- Statistik
-CONSUME_KINDS = ("ams", "job", "slicer")
+CONSUME_KINDS = ("ams", "job", "slicer", "history")
 
 
 @bp.get("/stats")

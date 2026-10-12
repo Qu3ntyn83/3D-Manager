@@ -68,7 +68,8 @@ def default_initial(f) -> float:
 
 
 def migrate(c):
-    """Einmalig: aus „Anzahl“ einzelne Spulen machen, vorhandene Tags verteilen."""
+    """Einmalig: aus „Anzahl“ einzelne Spulen machen, vorhandene Tags verteilen, alte Drucke ins Verbrauchsprotokoll."""
+    fresh = not c.execute("SELECT 1 FROM spool_units LIMIT 1").fetchone()
     for f in c.execute("SELECT * FROM filaments").fetchall():
         if c.execute("SELECT 1 FROM spool_units WHERE filament_id=?", (f["id"],)).fetchone():
             continue
@@ -89,9 +90,44 @@ def migrate(c):
                 c.execute("UPDATE tags SET unit_id=? WHERE tag_key=?", (uid, t["tag_key"]))
                 if t["remain_pct"] is not None and t["remain_pct"] >= 0:
                     u = c.execute("SELECT initial_g FROM spool_units WHERE id=?", (uid,)).fetchone()
-                    set_remaining(c, uid, (u["initial_g"] or 1000) * t["remain_pct"] / 100, "ams", "Migration aus AMS")
+                    set_remaining(c, uid, (u["initial_g"] or 1000) * t["remain_pct"] / 100, "ams", "Migration aus AMS", kind="init")
     except Exception:  # noqa: BLE001 – tags-Tabelle evtl. noch nicht vorhanden
         pass
+    if fresh:
+        backfill_history(c)
+
+
+def backfill_history(c):
+    """Verbrauch der Drucke aus der Zeit vor der Spulen-Verwaltung für die Statistik übernehmen.
+
+    Ändert keine Restmengen (die stecken schon im Bestand), Art „history“.
+    """
+    if get_setting(c, "history_backfill_v1"):
+        return
+    set_setting(c, "history_backfill_v1", now())
+    try:
+        jobs = c.execute("SELECT * FROM print_jobs WHERE usage IS NOT NULL AND usage!='[]'").fetchall()
+    except Exception:  # noqa: BLE001
+        return
+    for j in jobs:
+        try:
+            usage = json.loads(j["usage"] or "[]")
+        except ValueError:
+            continue
+        for e in usage:
+            g = e.get("grams")
+            if not isinstance(g, (int, float)) or g <= 0:
+                continue
+            t = c.execute("SELECT unit_id FROM tags WHERE tag_key=?", (e.get("tag_key"),)).fetchone() if e.get("tag_key") else None
+            uid = t["unit_id"] if t and t["unit_id"] else None
+            if not uid and e.get("filament_ref"):
+                u = c.execute("SELECT id FROM spool_units WHERE filament_id=? ORDER BY status='empty', id LIMIT 1",
+                              (e["filament_ref"],)).fetchone()
+                uid = u["id"] if u else None
+            if uid:
+                c.execute("INSERT INTO unit_log (unit_id, ts, kind, delta_g, remaining_g, ref) VALUES (?,?,?,?,?,?)",
+                          (uid, j["ended"] or j["started"] or now(), "history", -round(float(g), 1), None,
+                           f"Druck „{j['name']}“ (vor Spulen-Verwaltung)"))
 
 
 # ---------------------------------------------------------------- Kernfunktionen
@@ -125,12 +161,12 @@ def log(c, uid, kind, delta, remaining, ref=None):
               (uid, now(), kind, round(delta, 1) if delta is not None else None, round(remaining, 1), ref))
 
 
-def set_remaining(c, uid, grams, src, ref=None):
+def set_remaining(c, uid, grams, src, ref=None, kind=None):
     u = c.execute("SELECT * FROM spool_units WHERE id=?", (uid,)).fetchone()
     if not u:
         return
     grams = max(0.0, float(grams))
-    log(c, uid, src, grams - (u["remaining_g"] or 0), grams, ref)
+    log(c, uid, kind or src, grams - (u["remaining_g"] or 0), grams, ref)
     c.execute("UPDATE spool_units SET remaining_g=?, remaining_src=?, remaining_at=? WHERE id=?", (grams, src, now(), uid))
 
 
@@ -177,7 +213,7 @@ def link_tag(c, tag_key, fid, unit_id=None):
               (uid, int(u["initial_g"] or 1000), tag_key, tag_key))
     t = c.execute("SELECT remain_pct FROM tags WHERE tag_key=? OR upper(tray_uuid)=upper(?)", (tag_key, tag_key)).fetchone()
     if t and t["remain_pct"] is not None and t["remain_pct"] >= 0:
-        set_remaining(c, uid, (u["initial_g"] or 1000) * t["remain_pct"] / 100, "ams", f"Tag {tag_key[:8]} zugeordnet")
+        set_remaining(c, uid, (u["initial_g"] or 1000) * t["remain_pct"] / 100, "ams", f"Tag {tag_key[:8]} zugeordnet", kind="init")
     return uid
 
 

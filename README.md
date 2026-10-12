@@ -62,6 +62,13 @@ Danach erreichbar unter `http://<docker-host>:8095`.
 - `SEED=1` in der `docker-compose.yml` füllt eine leere Datenbank beim ersten Start mit einem Beispiel-Inventar.
 - `BAMBU_MOCK=/app/mock_spools.json` zeigt Beispiel-Spulen der Cloud-Bibliothek ohne Bambu-Account.
 
+**Umstieg vom alten Paket „3D Management“** (Daten, Fotos, RFID-Zuordnungen und DNS-Einstellung werden übernommen, das alte Verzeichnis bleibt als Rückweg liegen):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Qu3ntyn83/3D-Manager/main/scripts/migrate-from-3d-management.sh -o migrate.sh
+sudo bash migrate.sh
+```
+
 **Update**
 
 ```bash
