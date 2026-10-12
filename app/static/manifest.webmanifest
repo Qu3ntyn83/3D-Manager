@@ -1,0 +1,22 @@
+{
+  "name": "3D Manager",
+  "short_name": "3D Manager",
+  "description": "Filament, Material, AMS und Druckerstatus",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#131210",
+  "theme_color": "#131210",
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Drucker", "url": "/?tab=printer" },
+    { "name": "AMS", "url": "/?tab=bambu" },
+    { "name": "Inventur", "url": "/?tab=filaments&view=check" }
+  ]
+}

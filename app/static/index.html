@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f2ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131210" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="3D Manager">
+<title>3D Manager</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23e8742e'/><circle cx='16' cy='16' r='5' fill='%23111'/></svg>">
+<script>
+  // Theme vor dem ersten Zeichnen setzen (kein Aufblitzen). Standard: dunkel.
+  (function () { var t = "dark"; try { t = localStorage.getItem("finv.theme") || "dark"; t = JSON.parse(t); } catch (e) {}
+    if (["dark", "light", "auto"].indexOf(t) < 0) t = "dark"; document.documentElement.dataset.theme = t; })();
+</script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="spool" aria-hidden="true"></span>
+    <div>
+      <h1>3D Manager</h1>
+      <p class="sub" id="stats">lädt …</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="filaments" class="active"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6"/></svg><span class="lbl">Filament</span></button>
+    <button role="tab" data-tab="printer"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M12 7v6M9 13h6M7 17h10"/></svg><span class="lbl">Drucker</span></button>
+    <button role="tab" data-tab="materials"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg><span class="lbl">Material</span></button>
+    <button role="tab" data-tab="accessories"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.5 17.3a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.1-.4-.4-2.1z"/></svg><span class="lbl">Zubehör</span></button>
+    <button role="tab" data-tab="bambu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M12 6v12M17 6v12"/></svg><span class="lbl"><span class="long">Bambu &amp; </span>AMS</span> <span class="dot" id="bambuDot"></span></button>
+  </nav>
+  <button class="pstat" id="pstat" hidden title="Druckerstatus"></button>
+  <div class="top-actions">
+    <button class="theme-btn" id="themeBtn" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten"></button>
+    <details class="menu">
+      <summary title="Daten">⋯</summary>
+      <div class="menu-pop">
+        <div class="lbl-sm">Darstellung</div>
+        <div class="theme-row"><button data-theme-set="dark">Dunkel</button><button data-theme-set="light">Hell</button><button data-theme-set="auto">System</button></div>
+        <a href="/api/export" download>Backup (JSON) herunterladen</a>
+        <a href="/api/export.csv?kind=filaments" download>Filament als CSV</a>
+        <a href="/api/export.csv?kind=materials" download>Material als CSV</a>
+        <label class="file-btn">Backup einspielen …<input type="file" id="importFile" accept="application/json" hidden></label>
+      </div>
+    </details>
+  </div>
+</header>
+
+<main>
+  <!-- FILAMENT -->
+  <section id="tab-filaments" class="tab">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Suchen: Farbe, Material, ID …" autocomplete="off">
+      <select id="fBrand"><option value="">Alle Marken</option></select>
+      <select id="fSort">
+        <option value="material">Sortierung: Material</option>
+        <option value="color">Sortierung: Farbton</option>
+        <option value="brand">Sortierung: Marke</option>
+        <option value="qty">Sortierung: Bestand</option>
+        <option value="check">Sortierung: Letzte Prüfung</option>
+      </select>
+      <div class="seg" role="group" aria-label="Ansicht">
+        <button data-view="grid" class="active" title="Kacheln">▦</button>
+        <button data-view="table" title="Tabelle">☰</button>
+        <button data-view="check" title="Inventur-Modus">✓</button>
+      </div>
+      <button class="primary" id="addFil">+ Filament</button>
+    </div>
+    <div class="chips" id="matChips"></div>
+    <div class="bulk" id="bulk" hidden>
+      <span id="bulkCount"></span>
+      <button id="bulkCheck">Als heute geprüft markieren</button>
+      <button id="bulkClear" class="ghost">Auswahl aufheben</button>
+    </div>
+    <div id="filGrid" class="grid"></div>
+    <p class="empty" id="filEmpty" hidden>Nichts gefunden.</p>
+  </section>
+
+  <!-- DRUCKER -->
+  <section id="tab-printer" class="tab" hidden>
+    <div id="prStatus"></div>
+    <div class="panel jobs">
+      <div class="row-head"><h3>Letzte Drucke</h3><span class="muted small">Filamentverbrauch je Druck aus der AMS-Restmenge der verlinkten Tags</span></div>
+      <div class="table-wrap"><table class="tbl" id="jobTable">
+        <thead><tr><th>Druck</th><th>Drucker</th><th>Start</th><th>Dauer</th><th>Ergebnis</th><th>Filament</th></tr></thead>
+        <tbody id="jobBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- BAMBU -->
+  <section id="tab-bambu" class="tab" hidden>
+    <div class="subnav seg" role="tablist">
+      <button data-sub="ams" class="active">AMS live</button>
+      <button data-sub="tags">RFID-Tags <b id="tagsOpen"></b></button>
+      <button data-sub="cloud">Cloud-Bibliothek</button>
+      <button data-sub="setup">Drucker &amp; Konto</button>
+    </div>
+
+    <!-- AMS live -->
+    <div class="sub" id="sub-ams">
+      <div class="toolbar">
+        <p class="muted grow">Direkt vom Drucker (MQTT). Slots mit RFID-Tag zeigen Restmenge in % und – über das Vollgewicht der verlinkten Spule – in Gramm.</p>
+        <button id="amsRefresh">↻ Aktualisieren</button>
+      </div>
+      <div id="amsLive"></div>
+    </div>
+
+    <!-- Tags -->
+    <div class="sub" id="sub-tags" hidden>
+      <p class="muted hint">Ein Tag ist nur eine ID. Ordne ihn der Spule zu, auf der er tatsächlich klebt – z. B. Bambu-Tag „PLA Basic Schwarz“ → Sunlu PLA+ Pink. Restmenge und Verbrauch laufen dann auf diese Spule. Das Vollgewicht gilt pro Tag (Netto der vollen Spule).</p>
+      <div class="toolbar">
+        <input type="search" id="tq" placeholder="Tags suchen: UID, Farbe, Inventar …" autocomplete="off">
+        <select id="tFilter">
+          <option value="">Alle Tags</option>
+          <option value="unlinked">Nicht zugeordnet</option>
+          <option value="ams">Im AMS</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="tbl" id="tTable">
+          <thead><tr><th></th><th>Tag (UID / Spulen-ID)</th><th>Tag meldet</th><th>Ist im Inventar</th><th>Vollgewicht</th><th>Rest</th><th>Verbrauch</th><th>Zuletzt</th><th></th></tr></thead>
+          <tbody id="tBody"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="tEmpty" hidden>Noch keine Tags gesehen – Drucker unter „Drucker &amp; Konto“ einrichten, Spule ins AMS legen.</p>
+    </div>
+
+    <!-- Cloud -->
+    <div class="sub" id="sub-cloud" hidden>
+      <div class="toolbar">
+        <input type="search" id="bq" placeholder="Spulen suchen: Farbe, RFID, Slot …" autocomplete="off">
+        <select id="bFilter">
+          <option value="">Alle Spulen</option>
+          <option value="unlinked">Nicht verlinkt</option>
+          <option value="linked">Verlinkt</option>
+          <option value="printer">Im Drucker / AMS</option>
+          <option value="gone">Nicht mehr in der Cloud</option>
+        </select>
+        <button class="primary" id="bSync">↻ Jetzt synchronisieren</button>
+      </div>
+      <div class="table-wrap">
+        <table class="tbl" id="bTable">
+          <thead><tr><th></th><th>Spule (Cloud)</th><th>RFID / Tray</th><th>Rest</th><th>Ort</th><th>Verlinkt mit Inventar</th><th></th></tr></thead>
+          <tbody id="bBody"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="bEmpty" hidden>Noch keine Spulen – verbinde deinen Bambu-Account und synchronisiere.</p>
+    </div>
+
+    <!-- Setup -->
+    <div class="sub" id="sub-setup" hidden>
+      <div class="bb-head">
+        <div class="panel" id="bbConn"></div>
+        <div class="panel" id="bbStats"></div>
+      </div>
+      <div class="panel">
+        <div class="row-head"><h3>Drucker</h3><span class="spacer"></span>
+          <button id="prImport" class="ghost">Aus Bambu-Account übernehmen</button>
+          <button id="prAdd" class="primary">+ Drucker</button></div>
+        <div id="prList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MATERIAL -->
+  <section id="tab-materials" class="tab" hidden>
+    <div class="toolbar">
+      <input type="search" id="mq" placeholder="Suchen: Holz, Magnet, Vinyl …" autocomplete="off">
+      <button class="primary" id="addMat">+ Material</button>
+    </div>
+    <div class="table-wrap">
+      <table class="mat">
+        <thead><tr><th>Bestand</th><th>Art</th><th>Beschreibung</th><th>Stärke/Maß</th><th>Lagerort</th><th>Links</th><th></th></tr></thead>
+        <tbody id="matBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ZUBEHÖR -->
+  <section id="tab-accessories" class="tab" hidden>
+    <div class="toolbar">
+      <input type="search" id="aq" placeholder="Suchen: Magnete, Kugellager, Düsen, Druckplatten …" autocomplete="off">
+      <button class="primary" id="addAcc">+ Zubehör</button>
+    </div>
+    <div class="table-wrap">
+      <table class="mat" id="accTable">
+        <thead><tr><th>Bestand</th><th>Art</th><th>Beschreibung</th><th>Stärke/Maß</th><th>Lagerort</th><th>Links</th><th></th></tr></thead>
+        <tbody id="accBody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Filament-Dialog -->
+<dialog id="filDlg">
+  <form method="dialog" id="filForm">
+    <header class="dlg-head">
+      <div class="swatch big" id="dlgSwatch"></div>
+      <div class="dlg-title">
+        <h2 id="filDlgTitle">Filament</h2>
+        <p class="muted" id="dlgSource"></p>
+      </div>
+      <button type="button" class="x" data-close>✕</button>
+    </header>
+
+    <div class="cat-search">
+      <label>Aus Herstellerkatalog übernehmen
+        <input type="search" id="catQ" placeholder="z. B. 10101, „PLA Matte Eisblau“, „Sunlu PLA+ White“" autocomplete="off">
+      </label>
+      <div id="catRes" class="cat-res"></div>
+    </div>
+
+    <div class="form-grid">
+      <label>Marke<input name="brand" list="brandList" required></label>
+      <label>Material / Serie<input name="material" list="matList" required></label>
+      <label>Farbe (eigene Bezeichnung)<input name="color_name" required></label>
+      <label>Hersteller-Farbname<input name="official_name"></label>
+      <label>Hersteller-ID / SKU<input name="sku" inputmode="numeric"></label>
+      <label>Anzahl<input name="qty" type="number" min="0" value="1"></label>
+      <label>Mindestbestand<input name="min_qty" type="number" min="0" value="0"></label>
+      <label>Restgewicht (g)<input name="weight_g" type="number" min="0" placeholder="optional"></label>
+      <label>Lagerort<input name="location" placeholder="z. B. Regal A2 / AMS 1"></label>
+      <label>Letzte Prüfung<input name="last_check" type="date"></label>
+    </div>
+
+    <fieldset class="checks">
+      <label><input type="checkbox" name="sealed"> OVP</label>
+      <label><input type="checkbox" name="spool"> Spule</label>
+      <label><input type="checkbox" name="refill"> Refill</label>
+      <label><input type="checkbox" name="sample"> Muster gedruckt</label>
+    </fieldset>
+
+    <fieldset class="colors">
+      <legend>Farbmuster</legend>
+      <div id="colorInputs"></div>
+      <div class="row">
+        <select name="pattern">
+          <option value="solid">einfarbig</option>
+          <option value="gradient">Verlauf</option>
+          <option value="multi">mehrfarbig</option>
+        </select>
+        <select name="swatch_source">
+          <option value="bambu">Hersteller (offiziell)</option>
+          <option value="community">Community-Messung</option>
+          <option value="estimated">geschätzt</option>
+          <option value="manual">manuell</option>
+        </select>
+        <button type="button" class="ghost" id="addColor">+ Farbe</button>
+      </div>
+      <div class="photo">
+        <img id="photoPrev" alt="" hidden>
+        <label class="file-btn">Foto vom Muster hochladen<input type="file" id="photoFile" accept="image/*" hidden></label>
+        <button type="button" class="ghost" id="photoDel" hidden>Foto entfernen</button>
+      </div>
+    </fieldset>
+
+    <fieldset class="rfid" id="rfidBox">
+      <legend>RFID-Tags (AMS &amp; Cloud)</legend>
+      <div id="rfidList"></div>
+      <div class="row">
+        <button type="button" class="pickbtn empty wide" id="rfidAdd"><span>RFID-Tag zuordnen … (Suche nach Slot, ID, Farbe)</span><i>🔍</i></button>
+      </div>
+    </fieldset>
+
+    <div class="form-grid links">
+      <label>Hersteller-Link<span class="urlrow"><input name="manufacturer_url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://… (Produktseite)"><a class="openlink" target="_blank" rel="noopener noreferrer" hidden>↗</a></span></label>
+      <label>Bezugsquelle (Shop-Link)<span class="urlrow"><input name="buy_url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://… (Shop zum Nachkaufen)"><a class="openlink" target="_blank" rel="noopener noreferrer" hidden>↗</a></span></label>
+    </div>
+
+    <label class="full">Notizen<textarea name="notes" rows="2"></textarea></label>
+
+    <footer class="dlg-foot">
+      <button type="button" class="danger ghost" id="filDel">Löschen</button>
+      <span class="spacer"></span>
+      <button type="button" class="ghost" data-close>Abbrechen</button>
+      <button type="submit" class="primary">Speichern</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- Material-Dialog -->
+<dialog id="matDlg">
+  <form method="dialog" id="matForm">
+    <header class="dlg-head">
+      <h2 id="matDlgTitle">Material</h2>
+      <button type="button" class="x" data-close>✕</button>
+    </header>
+    <div class="form-grid">
+      <label>Art<input name="category" list="catList"></label>
+      <label>Beschreibung<input name="description" required></label>
+      <label>Stärke / Maß<input name="thickness"></label>
+      <label>Anzahl<input name="qty" type="number" min="0" value="1"></label>
+      <label>Mindestbestand<input name="min_qty" type="number" min="0" value="0"></label>
+      <label>Lagerort<input name="location"></label>
+      <label>Bereich<select name="kind"><option value="material">Material</option><option value="zubehoer">Zubehör</option></select></label>
+      <label>Hersteller<input name="manufacturer" list="mfrList" placeholder="z. B. xTool, Bambu Lab"></label>
+    </div>
+    <div class="form-grid links">
+      <label>Hersteller-Link<span class="urlrow"><input name="manufacturer_url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…"><a class="openlink" target="_blank" rel="noopener noreferrer" hidden>↗</a></span></label>
+      <label>Bezugsquelle (Shop-Link)<span class="urlrow"><input name="buy_url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…"><a class="openlink" target="_blank" rel="noopener noreferrer" hidden>↗</a></span></label>
+    </div>
+    <label class="full">Notizen<textarea name="notes" rows="2"></textarea></label>
+    <footer class="dlg-foot">
+      <button type="button" class="danger ghost" id="matDel">Löschen</button>
+      <span class="spacer"></span>
+      <button type="button" class="ghost" data-close>Abbrechen</button>
+      <button type="submit" class="primary">Speichern</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- Drucker-Dialog -->
+<dialog id="prDlg">
+  <form method="dialog" id="prForm">
+    <header class="dlg-head"><h2 id="prTitle">Drucker</h2><button type="button" class="x" data-close>✕</button></header>
+    <div class="form-grid">
+      <label>Name<input name="name" placeholder="z. B. H2S"></label>
+      <label>Seriennummer<input name="serial" required placeholder="Drucker → Einstellungen → Gerät"></label>
+      <label>Verbindung
+        <select name="mode"><option value="lan">LAN (IP + Zugangscode)</option><option value="cloud">Bambu Cloud (Account-Token)</option></select>
+      </label>
+      <label class="lan">IP-Adresse<input name="host" placeholder="z. B. 192.168.1.50"></label>
+      <label class="lan">LAN-Zugangscode<input name="access_code" placeholder="8-stellig, Display → WLAN/LAN"></label>
+      <label class="chkline"><input type="checkbox" name="enabled" checked> aktiv</label>
+    </div>
+    <p class="muted small" id="prHint"></p>
+    <footer class="dlg-foot">
+      <button type="button" class="danger ghost" id="prDel">Löschen</button><span class="spacer"></span>
+      <button type="button" class="ghost" data-close>Abbrechen</button><button type="submit" class="primary">Speichern</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- Such-Auswahl -->
+<dialog id="pickDlg" class="pickdlg">
+  <div class="pickhead">
+    <h2 id="pickTitle">Auswählen</h2>
+    <button type="button" class="x" data-close>✕</button>
+  </div>
+  <input type="search" id="pickQ" placeholder="Suchen: Marke, Farbe, Material, ID, Lagerort, Hex …" autocomplete="off" enterkeyhint="search">
+  <div class="pickmeta"><span id="pickCount"></span><span class="muted">↑ ↓ wählen · Enter übernehmen · Esc schließen</span></div>
+  <ul id="pickList" class="picklist"></ul>
+</dialog>
+
+<datalist id="brandList"></datalist>
+<datalist id="matList"></datalist>
+<datalist id="catList"></datalist>
+<datalist id="mfrList"></datalist>
+<div id="toast" role="status"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

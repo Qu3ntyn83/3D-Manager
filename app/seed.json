@@ -1,0 +1,1908 @@
+{
+ "filaments": [
+  {
+   "brand": "Bambu Lab",
+   "material": "ABS",
+   "color_name": "Weiß",
+   "sku": "40100",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FFFFFFFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Weiß"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PA6-GF",
+   "color_name": "Weiß",
+   "sku": "72102",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#EAEAE4FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Weiß"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG",
+   "color_name": "Green",
+   "sku": "",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#4EE349FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG",
+   "color_name": "Grey",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#6B6E6EFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Gelb",
+   "sku": "30402",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FCE300FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Yellow"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Weiß",
+   "sku": "30106",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FFFFFFFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "White"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Rot",
+   "sku": "30201",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#D6001CFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Red"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Schwarz",
+   "sku": "30105",
+   "qty": 2,
+   "sealed": true,
+   "spool": false,
+   "refill": true,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#000000FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Black"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Schwarz",
+   "sku": "30105",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#000000FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Black"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Dark Beige",
+   "sku": "30403",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#DBC8B6FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Dark Beige"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG Basic",
+   "color_name": "Mint Green",
+   "sku": "",
+   "qty": 2,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#00B39AFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Weiß",
+   "sku": "30106",
+   "qty": 2,
+   "sealed": true,
+   "spool": false,
+   "refill": true,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FFFFFFFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "White"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG Basic",
+   "color_name": "Sky Blue",
+   "sku": "",
+   "qty": 2,
+   "sealed": true,
+   "spool": false,
+   "refill": true,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#0CB7CCFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Basic",
+   "color_name": "Misty Blue",
+   "sku": "30108",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#688197FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Misty Blue"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG HF",
+   "color_name": "Schwarz",
+   "sku": "33102",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#000000FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Schwarz"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG HF Matte",
+   "color_name": "Black",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#454546FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Translucent",
+   "color_name": "Durchsichtiges Lila",
+   "sku": "32700",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#D6ABFF80"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Durchsichtiges Lila"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Translucent",
+   "color_name": "Durchsichtiges Hellblau",
+   "sku": "32600",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#61B0FF80"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Durchsichtiges Hellblau"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Translucent",
+   "color_name": "Blaugrün",
+   "sku": "32501",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#77EDD780"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Durchsichtiges Blaugrün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG Translucent",
+   "color_name": "Durchsichtiges Grau",
+   "sku": "32100",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#8E8E8E80"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Durchsichtiges Grau"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG Transparent",
+   "color_name": "Purple",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#A69ED080"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG Transparent",
+   "color_name": "Green",
+   "sku": "",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#7CE0D380"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG Transparent",
+   "color_name": "Clear",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#C8C7BF60"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PETG-CF",
+   "color_name": "Schwarz",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#4B4C4CFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "community",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PETG-CF",
+   "color_name": "Lila-Violett",
+   "sku": "31700",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#583061FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Lila-Violett"
+  },
+  {
+   "brand": "Anycubic",
+   "material": "PLA +",
+   "color_name": "Silver",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#8A8D8FFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "community",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA +",
+   "color_name": "Coffee Brown",
+   "sku": "",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#8E6B4EFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA +",
+   "color_name": "Cherry Red",
+   "sku": "",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#EA4A5DFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "community",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA +",
+   "color_name": "Fuchsia",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#B0207FFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Grau",
+   "sku": "10103",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#8E9089FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Grau"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Jade-Weiß",
+   "sku": "10100",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FFFFFFFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Jade-Weiß"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Lila",
+   "sku": "10700",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#5E43B7FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Lila"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Bambusgrün",
+   "sku": "10501",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#00AE42FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Bambusgrün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Kürbis-Orange",
+   "sku": "10301",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FF9016FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Kürbis-Orange"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Rot",
+   "sku": "10200",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#C12E1FFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Rot"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Cyan",
+   "sku": "10603",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#0086D6FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Cyan"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Sonnenblumen-Gelb",
+   "sku": "10402",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FEC600FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Sonnenblumen-Gelb"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Türkis",
+   "sku": "10605",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#00B1B7FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Türkis"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Blau",
+   "sku": "10601",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#0A2989FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Blau"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Beige",
+   "sku": "10201",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#F7E6DEFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Beige"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Mistelzweig-Grün",
+   "sku": "10502",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#3F8E43FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Mistelzweig-Grün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Gelb",
+   "sku": "10400",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#F4EE2AFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Gelb"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Orange",
+   "sku": "10300",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FF6A13FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Orange"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Kobaltblau",
+   "sku": "10604",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#0056B8FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Kobaltblau"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Schwarz",
+   "sku": "10101",
+   "qty": 1,
+   "sealed": true,
+   "spool": false,
+   "refill": true,
+   "sample": false,
+   "last_check": null,
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#000000FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Schwarz"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Lila",
+   "sku": "10700",
+   "qty": 1,
+   "sealed": true,
+   "spool": false,
+   "refill": true,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#5E43B7FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Lila"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Hellgrün",
+   "sku": "10503",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#BECF00FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Hellgrün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Bambusgrün",
+   "sku": "10501",
+   "qty": 2,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#00AE42FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Bambusgrün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Silber",
+   "sku": "10102",
+   "qty": 1,
+   "sealed": true,
+   "spool": false,
+   "refill": true,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#A6A9AAFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Silber"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Gold",
+   "sku": "10401",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#E4BD68FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Gold"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Hellgrau",
+   "sku": "10104",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#D1D3D5FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Hellgrau"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Braun",
+   "sku": "10800",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#9D432CFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Braun"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Indigo Purple",
+   "sku": "10701",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#482960FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Indigo-Violett"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Basic",
+   "color_name": "Mint Green",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#4CCB9AFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "community",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Basic",
+   "color_name": "Sky Blue",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#0CB7CCFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "community",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Basic",
+   "color_name": "Bone White",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#E9E4D1FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Kakaobraun",
+   "sku": "10802",
+   "qty": 1,
+   "sealed": true,
+   "spool": false,
+   "refill": true,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#6F5034FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Kakaobraun"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Basic",
+   "color_name": "Kakaobraun",
+   "sku": "10802",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#6F5034FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Kakaobraun"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Galaxy",
+   "color_name": "Stardust Purple",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#4B2A6BFF",
+    "#C9B8F0FF"
+   ],
+   "pattern": "gradient",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Galaxy",
+   "color_name": "Starlit Flow",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#22305AFF",
+    "#9FB6E8FF"
+   ],
+   "pattern": "gradient",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Galaxy",
+   "color_name": "Stardust Purple",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#4B2A6BFF",
+    "#C9B8F0FF"
+   ],
+   "pattern": "gradient",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Galaxy",
+   "color_name": "Star Brown",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#5E4241FF",
+    "#C8A98AFF"
+   ],
+   "pattern": "gradient",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA Galaxy",
+   "color_name": "Galaxy Green",
+   "sku": "",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#2F4F3AFF",
+    "#A8D5B0FF"
+   ],
+   "pattern": "gradient",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Glow",
+   "color_name": "Leuchtend-Gelb",
+   "sku": "15400",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#F8FF80FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Leuchtend-Gelb"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Glow",
+   "color_name": "Leuchtend-Grün",
+   "sku": "15500",
+   "qty": 1,
+   "sealed": true,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#A1FFACFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Leuchtend-Grün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Fliederlila",
+   "sku": "11700",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#AE96D4FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Flieder-Violett"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Sakura-Rosa",
+   "sku": "11201",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#E8AFCFFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Sakura-Pink"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Grasgrün",
+   "sku": "11500",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#61C680FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Grasgrün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Dunkelrot",
+   "sku": "11202",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#BB3D43FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Dunkelrot"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Apfelgrün",
+   "sku": "11502",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#C2E189FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Apfelgrün"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Wüstengelb",
+   "sku": "11401",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#E8DBB7FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Wüstenbraun"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Scharlachrot",
+   "sku": "11200",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#DE4343FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Scharlachrot"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Eisblau",
+   "sku": "11601",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#A3D8E1FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Eisblau"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Marineblau",
+   "sku": "11600",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#0078BFFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Marineblau"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Anthrazit (Kohlschwarz)",
+   "sku": "11101",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#000000FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Kohlschwarz"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Zitronengelb",
+   "sku": "11400",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#F7D959FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Zitronengelb"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Ivory White",
+   "sku": "11100",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#FFFFFFFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Elfenbeinweiß"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Latte Braun",
+   "sku": "11800",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#D3B7A7FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Milchkaffee-Braun"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Matte",
+   "color_name": "Dunkelbraun",
+   "sku": "11801",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#7D6556FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Dunkelbraun"
+  },
+  {
+   "brand": "Eono",
+   "material": "PLA Silk",
+   "color_name": "Black & Blue",
+   "sku": "",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#151515FF",
+    "#1E4FD8FF"
+   ],
+   "pattern": "gradient",
+   "swatch_source": "estimated",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Silk +",
+   "color_name": "Silber",
+   "sku": "13109",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#C8C8C8FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Silber"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "PLA Trans",
+   "color_name": "Eisblau",
+   "sku": "13610",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": true,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#B8CDE980"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Ice Blue"
+  },
+  {
+   "brand": "Sunlu",
+   "material": "PLA +",
+   "color_name": "Black",
+   "sku": "",
+   "qty": 2,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#3A3B3BFF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "community",
+   "official_name": ""
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "Support for PLA/PETG",
+   "color_name": "Natur",
+   "sku": "65102",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#00000000"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Natur"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "TPU 90A",
+   "color_name": "Chrystal Blue",
+   "sku": "51601",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#7EB4E180"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Crystal Blue"
+  },
+  {
+   "brand": "Bambu Lab",
+   "material": "TPU AMS",
+   "color_name": "Schwarz",
+   "sku": "53101",
+   "qty": 1,
+   "sealed": false,
+   "spool": true,
+   "refill": false,
+   "sample": false,
+   "last_check": "2026-10-11",
+   "location": "",
+   "notes": "",
+   "colors": [
+    "#000000FF"
+   ],
+   "pattern": "solid",
+   "swatch_source": "bambu",
+   "official_name": "Schwarz"
+  }
+ ],
+ "materials": [
+  {
+   "qty": 7,
+   "category": "Holz",
+   "description": "Basswood Plywood",
+   "thickness": "3 mm",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 12,
+   "category": "Holz",
+   "description": "Sapele Plywood",
+   "thickness": "3 mm",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 4,
+   "category": "Kork",
+   "description": "Kork",
+   "thickness": "2 mm",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 3,
+   "category": "Acryl",
+   "description": "Grün",
+   "thickness": "3 mm",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 3,
+   "category": "Acryl",
+   "description": "Rot",
+   "thickness": "3 mm",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 10,
+   "category": "Transferfolie",
+   "description": "Vinyl Rot",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 10,
+   "category": "Folie",
+   "description": "Matte Removable Vinyl Grün",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 10,
+   "category": "Folie",
+   "description": "Matte Removable Vinyl Carbon",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 5,
+   "category": "Leder",
+   "description": "Pebbled PU Leatherette Fabric Schwarz",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 10,
+   "category": "Leder",
+   "description": "Pebbled PU Leatherette Fabric Weiß",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 5,
+   "category": "Folie",
+   "description": "Light Gray Reflective Decal Sheet",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 11,
+   "category": "Stahl",
+   "description": "Small Round Stainess Steel",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 10,
+   "category": "Aluminium",
+   "description": "Aluminium Card",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 10,
+   "category": "",
+   "description": "Rectangular PU Iron-on Patch",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 1,
+   "category": "Karton",
+   "description": "250g Cardstock (weiß)",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 3,
+   "category": "Papier",
+   "description": "Pearlescent White Greeting Card Set",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 1,
+   "category": "Set",
+   "description": "Maker's Beginner Kit",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 26,
+   "category": "Zubehör",
+   "description": "Skateboard Kugellager (608zz)",
+   "thickness": "8x22x7mm",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 50,
+   "category": "Magnet",
+   "description": "5 x 2mm",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 30,
+   "category": "Magnet",
+   "description": "8 x 2mm",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 20,
+   "category": "Magnet",
+   "description": "10 x 2mm",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  },
+  {
+   "qty": 1,
+   "category": "Stahl",
+   "description": "Round Stainess Steel",
+   "thickness": "",
+   "location": "",
+   "notes": ""
+  }
+ ]
+}
