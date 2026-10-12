@@ -432,7 +432,7 @@ async function refreshFilQuiet() { state.fil = await api("/api/filaments"); if (
 function setSub(sub) {
   state.sub = sub; store.set("sub", sub);
   $$(".subnav button").forEach(b => b.classList.toggle("active", b.dataset.sub === sub));
-  $$("#tab-bambu .sub").forEach(d => d.hidden = d.id !== "sub-" + sub);
+  $$("#tab-bambu .subview").forEach(d => d.hidden = d.id !== "sub-" + sub);
 }
 $$(".subnav button").forEach(b => b.onclick = () => setSub(b.dataset.sub));
 setSub(state.sub);

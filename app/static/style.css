@@ -30,7 +30,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 h1, h2 { margin: 0; letter-spacing: -.01em; }
 h1 { font-size: 18px; }
 h2 { font-size: 17px; }
-.muted, .sub { color: var(--muted); margin: 0; font-size: 12.5px; }
+.muted, .brand .sub { color: var(--muted); margin: 0; font-size: 12.5px; }
 
 /* Header */
 .top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 20px;
@@ -383,6 +383,7 @@ small.err { display: block; color: var(--danger); }
 /* =====================================================================
    Navigation-Icons (Desktop ausgeblendet)
    ===================================================================== */
+.tabs .icw { display: contents; }
 .tabs .ico { display: none; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .tabs .lbl { white-space: nowrap; }
 
@@ -420,22 +421,26 @@ small.err { display: block; color: var(--danger); }
   .brand { gap: 10px; flex: 1; min-width: 0; }
   .spool { width: 26px; height: 26px; }
   h1 { font-size: 16px; }
-  .sub { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand .sub { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .top-actions { order: 2; margin-left: 0; }
   .menu summary { width: 40px; height: 40px; }
   .pstat { order: 3; width: 100%; justify-content: flex-start; margin: 0; overflow-x: auto; flex-wrap: nowrap; }
   .ps { font-size: 12px; padding: 6px 10px; }
 
   /* Navigation unten */
-  .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; order: 9; width: auto; display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 0; padding: 4px 6px calc(4px + env(safe-area-inset-bottom)); border: 0; border-top: 1px solid var(--line); border-radius: 0;
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; order: 9; width: auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+    gap: 2px; padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); border: 0; border-top: 1px solid var(--line); border-radius: 0;
     background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(10px); }
-  .tabs button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 2px; min-height: 54px;
-    font-size: 11px; border-radius: 10px; position: relative; }
-  .tabs button.active { background: transparent; box-shadow: none; color: var(--accent); }
+  .tabs button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 0 4px; min-height: 56px;
+    min-width: 0; font-size: 10.5px; letter-spacing: -.1px; border-radius: 10px; position: relative; -webkit-tap-highlight-color: transparent; }
+  .tabs button.active { background: transparent; box-shadow: none; color: var(--accent); font-weight: 600; }
   .tabs .ico { display: block; }
+  .tabs .icw { display: grid; place-items: center; width: 48px; height: 28px; border-radius: 14px; transition: background .15s; }
+  .tabs button.active .icw { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .tabs button:active .icw { background: color-mix(in srgb, var(--text) 10%, transparent); }
+  .tabs .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .tabs .long { display: none; }
-  .tabs .dot { position: absolute; top: 8px; right: calc(50% - 18px); margin: 0; }
+  .tabs .dot { position: absolute; top: 5px; right: calc(50% - 22px); margin: 0; box-shadow: 0 0 0 2px var(--panel); }
 
   main { padding: 12px 12px 24px; }
   .toolbar { gap: 8px; }
@@ -445,8 +450,8 @@ small.err { display: block; color: var(--danger); }
   .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin: 0 -12px 12px; padding-left: 12px; padding-right: 12px; scrollbar-width: none; }
   .chips::-webkit-scrollbar { display: none; }
   .chip { flex: none; padding: 6px 12px; }
-  .subnav { display: flex; overflow-x: auto; flex-wrap: nowrap; width: 100%; }
-  .subnav button { flex: none; }
+  .subnav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .subnav button { min-width: 0; padding: 10px 6px; }
   .ckhead { top: calc(112px + env(safe-area-inset-top)); }
 
   /* Touch-Größen; 16px verhindert Zoom bei iOS */
@@ -588,8 +593,6 @@ td.links { white-space: normal; }
 .openlink { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border: 1px solid var(--line); border-radius: 8px;
   color: var(--accent); text-decoration: none; font-size: 16px; }
 @media (max-width: 700px) {
-  .tabs { grid-template-columns: repeat(5, 1fr); }
-  .tabs button { font-size: 10.5px; }
   .form-grid.links { grid-template-columns: 1fr; }
   .openlink { width: 42px; height: 42px; }
   table.mat td.links:empty { display: none; }
@@ -598,7 +601,7 @@ td.links { white-space: normal; }
 @media (max-width: 700px) {
   .brand > div { min-width: 0; flex: 1; }
   .top-actions { flex: none; }
-  .sub { display: block; }
+  .brand .sub { display: block; }
 }
 
 /* ---------- Such-Auswahl ---------- */
@@ -731,8 +734,6 @@ svg.chart .axl.start { text-anchor: start; }
 
 @media (max-width: 900px) { .ov-grid { grid-template-columns: 1fr; } }
 @media (max-width: 700px) {
-  .tabs { grid-template-columns: repeat(7, 1fr); padding-left: 2px; padding-right: 2px; }
-  .tabs button { font-size: 9.5px; padding: 6px 0; }
   .tabs .ico { width: 20px; height: 20px; }
   .units .unitrow { grid-template-columns: auto auto 1fr; }
   .units .umeta, .units .uacts { grid-column: 1 / -1; }
