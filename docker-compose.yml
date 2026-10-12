@@ -1,0 +1,20 @@
+services:
+  3d-manager:
+    build: .
+    image: 3d-manager:latest
+    container_name: 3d-manager
+    restart: unless-stopped
+    ports:
+      - "8095:8080"
+    environment:
+      - TZ=Europe/Berlin
+      # SEED=1 → leere Datenbank beim ersten Start mit Beispiel-Inventar füllen
+      - SEED=0
+      # Demo ohne Bambu-Account: Beispiel-Spulen der Cloud-Bibliothek laden
+      # - BAMBU_MOCK=/app/mock_spools.json
+    # Falls der Container keine Namen auflösen kann ("Could not resolve host"):
+    # dns:
+    #   - 192.168.1.1   # eigener Router/Firewall
+    #   - 1.1.1.1
+    volumes:
+      - ./data:/data
