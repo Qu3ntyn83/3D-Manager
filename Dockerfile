@@ -4,6 +4,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ /app/
+# Bambu-Farbkatalog (AGPL, nicht im Repo) beim Build laden – schlägt das fehl, lädt die App ihn beim Start
+RUN python /app/catalog_fetch.py /app/catalog/bambu.json
 RUN useradd -u 1000 -m inv && mkdir -p /data && chown -R inv /data
 USER inv
 VOLUME /data

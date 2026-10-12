@@ -64,6 +64,10 @@ def init_schema():
     with conn() as c:
         c.executescript(SCHEMA)
         c.executescript(JOBS_SCHEMA)
+        have = {r[1] for r in c.execute("PRAGMA table_info(print_jobs)")}
+        for col, typ in (("slots", "TEXT"), ("end_percent", "INTEGER"), ("last_percent", "INTEGER"), ("task_id", "INTEGER"), ("usage_src", "TEXT")):
+            if col not in have:
+                c.execute(f"ALTER TABLE print_jobs ADD COLUMN {col} {typ}")
         c.execute("UPDATE printers SET enabled=enabled")  # no-op, Tabelle sicher vorhanden
         c.execute("UPDATE tags SET in_ams=0")  # nach Neustart erst nach erstem Report wieder „im AMS“
         cols = {r[1] for r in c.execute("PRAGMA table_info(spools)")}
@@ -347,6 +351,9 @@ def update_tag(c, key, tr, pid, aid, tid, remain, ts):
             if delta > 0:
                 vals["consumed_g"] = (old["consumed_g"] or 0) + delta / 100 * full
         c.execute(f"UPDATE tags SET {','.join(k + '=?' for k in vals)} WHERE tag_key=?", [*vals.values(), key])
+        if "remain_pct" in vals and old["remain_pct"] is not None and old["remain_pct"] > vals["remain_pct"] >= 0:
+            import units
+            units.ams_delta(c, key, old["remain_pct"] - vals["remain_pct"], old["full_weight_g"])
     if "remain_pct" in vals and (not old or old["remain_pct"] != vals["remain_pct"]):
         full = (old["full_weight_g"] if old else None) or tag_w or 1000
         c.execute("INSERT INTO tag_log (tag_key, ts, remain, grams) VALUES (?,?,?,?)",
@@ -648,14 +655,20 @@ def tag_log(key):
 def _job_out(c, r, fil):
     d = dict(r)
     d.pop("snapshot", None)
+    d.pop("slots", None)
     usage = json.loads(d.pop("usage") or "[]")
     for u in usage:
         f = fil.get(u.get("filament_ref"))
         u["filament"] = f
+        if u.get("unit_id"):
+            u["unit_code"] = f"S{u['unit_id']:04d}"
     d["usage"] = usage
-    d["grams"] = round(sum(u["grams"] for u in usage), 1)
+    d["grams"] = round(sum(u["grams"] for u in usage if not u.get("skipped")), 1)
+    d["unassigned"] = sum(1 for u in usage if u.get("unassigned"))
     if d["started"] and d["ended"]:
         d["minutes"] = round((datetime.fromisoformat(d["ended"]) - datetime.fromisoformat(d["started"])).total_seconds() / 60)
+    import insights
+    d["cost"] = insights.job_costs(c, d) if d.get("ended") else None
     return d
 
 
@@ -737,6 +750,7 @@ def rfid_list():
                 "claim_color": (t["tag_color"] or "").upper(),
                 "percent": pct, "full_weight_g": full, "grams": round(pct / 100 * full) if pct is not None else None,
                 "consumed_g": d["consumed_g"], "filament_ref": t["filament_ref"], "filament": fil.get(t["filament_ref"]),
+                "unit_id": t["unit_id"] if "unit_id" in t.keys() else None,
                 "in_ams": d["in_ams"], "slot": [t["ams_id"], t["tray_id"]] if d["in_ams"] else None,
                 "printer": names.get(t["printer_id"]), "last_seen": t["last_seen"],
             })
@@ -753,6 +767,14 @@ def rfid_list():
                 "in_ams": bool(r["in_printer"]), "slot": [r["ams_id"], int(r["slot_id"])] if r["in_printer"] and str(r["slot_id"] or "").isdigit() else None,
                 "printer": r["device_name"], "last_seen": r["last_seen"], "gone": not r["present"],
             })
+        # Restgewicht der zugeordneten Spule hat Vorrang (berücksichtigt Wiegen/Druckaufträge)
+        um = {r["id"]: r for r in c.execute("SELECT id, remaining_g, initial_g FROM spool_units")}
+        for o in out:
+            u = um.get(o.get("unit_id"))
+            if u and u["remaining_g"] is not None:
+                o["grams"] = round(u["remaining_g"])
+                o["full_weight_g"] = int(u["initial_g"] or o["full_weight_g"] or 1000)
+                o["percent"] = round(u["remaining_g"] / (u["initial_g"] or 1000) * 100)
         return jsonify(out)
 
 
@@ -770,6 +792,27 @@ def rfid_link(key):
             n += c.execute("UPDATE spools SET filament_ref=?, link_mode=? WHERE upper(rfid)=upper(?)", (fid, mode, u)).rowcount
         if not n:
             abort(404)
+        import units
+        if c.execute("SELECT 1 FROM tags WHERE tag_key=? OR upper(tray_uuid)=upper(?)", (key, key)).fetchone():
+            units.link_tag(c, key, fid, request.get_json(force=True).get("unit_id"))
+    return jsonify({"ok": True})
+
+
+@bp.post("/rfid/<path:key>/empty")
+def rfid_empty(key):
+    """„Spule leer“: zugehörige Spule als leer markieren und den Tag für die nächste Spule freigeben."""
+    import units
+    with conn() as c:
+        t = c.execute("SELECT * FROM tags WHERE tag_key=? OR upper(tray_uuid)=upper(?)", (key, key)).fetchone()
+        if not t:
+            abort(404)
+        if t["unit_id"]:
+            units.mark_empty(c, t["unit_id"])
+        elif t["filament_ref"]:
+            units.adjust_filament(c, t["filament_ref"], -1)
+        c.execute("UPDATE tags SET filament_ref=NULL, link_mode=NULL, unit_id=NULL WHERE tag_key=?", (t["tag_key"],))
+        if t["tray_uuid"]:
+            c.execute("UPDATE spools SET filament_ref=NULL, link_mode=NULL WHERE upper(rfid)=upper(?)", (t["tray_uuid"],))
     return jsonify({"ok": True})
 
 

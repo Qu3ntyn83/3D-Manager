@@ -1,0 +1,116 @@
+"""Smoke- und Logiktests für 3D Manager (laufen ohne Netzwerk, Drucker und Bambu-Account)."""
+import json
+import sqlite3
+
+
+def test_index_and_static(client):
+    assert client.get("/").status_code == 200
+    assert client.get("/healthz").data == b"ok"
+    assert client.get("/sw.js").status_code == 200
+    assert client.get("/manifest.webmanifest").status_code == 200
+
+
+def test_seed_creates_units(client):
+    fil = client.get("/api/filaments").json
+    assert len(fil) > 50
+    for f in fil:
+        assert len([u for u in f["units"] if u["status"] != "empty"]) == f["qty"]
+
+
+def test_adjust_and_qty_sync(client):
+    f = client.post("/api/filaments", json={"brand": "Test", "material": "PETG-CF", "color_name": "Grau", "qty": 2,
+                                            "colors": ["#777777FF"], "net_weight_g": 800}).json
+    assert f["qty"] == 2 and len(f["units"]) == 2 and f["units"][0]["initial_g"] == 800
+    assert client.post(f"/api/filaments/{f['id']}/adjust", json={"delta": 1}).json["qty"] == 3
+    r = client.post(f"/api/filaments/{f['id']}/adjust", json={"delta": -1}).json
+    assert r["qty"] == 2 and sum(u["status"] == "empty" for u in r["units"]) == 1
+    assert client.put(f"/api/filaments/{f['id']}", json={"qty": 4}).json["qty"] == 4
+
+
+def test_weigh_with_tare(client):
+    f = client.post("/api/filaments", json={"brand": "Test", "material": "PLA", "color_name": "Weiß", "qty": 1, "colors": ["#FFFFFFFF"]}).json
+    uid = f["units"][0]["id"]
+    assert client.post(f"/api/units/{uid}/weigh", json={"gross_g": 700, "tare_g": 200}).json["ok"]
+    u = client.get(f"/api/units/{uid}").json
+    assert u["remaining_g"] == 500 and u["status"] == "open" and u["remaining_src"] == "weighed"
+    assert client.get(f"/api/filaments/{f['id']}").json["tare_g"] == 200
+
+
+def test_family_detection(client):
+    fam = lambda m: client.get(f"/api/profiles/family?material={m}").json["family"]  # noqa: E731
+    assert fam("PETG-CF") == "PETG"
+    assert fam("PA6-GF") == "PA"
+    assert fam("Support for PLA/PETG") == "SUPPORT"
+    assert fam("PLA Basic") == "PLA"
+    assert fam("TPU 90A") == "TPU"
+
+
+def test_shopping_and_ordered(client):
+    f = client.post("/api/filaments", json={"brand": "Test", "material": "ASA", "color_name": "Rot", "qty": 1, "min_qty": 1,
+                                            "colors": ["#FF0000FF"], "buy_url": "https://shop.example/asa"}).json
+    items = client.get("/api/shopping").json
+    it = [i for i in items if i["type"] == "filament" and i["id"] == f["id"]][0]
+    assert it["shop"] == "shop.example"
+    client.post("/api/shopping/ordered", json={"type": "filament", "id": f["id"], "ordered": True})
+    assert client.get(f"/api/filaments/{f['id']}").json["ordered_at"]
+
+
+def test_costs_in_stats(client):
+    f = client.post("/api/filaments", json={"brand": "Test", "material": "PLA", "color_name": "Blau", "qty": 1, "price": 20,
+                                            "net_weight_g": 1000, "colors": ["#0000FFFF"]}).json
+    st = client.get("/api/stats").json
+    assert st["kpi"]["stock_value"] >= 20
+
+
+def test_cloud_task_booking(client, appmod):
+    """Slicer-Gramm aus einem Bambu-Druckauftrag korrigieren die AMS-Schätzung und markieren Slots ohne Tag."""
+    import tasks
+    from bambu import conn
+    f = client.post("/api/filaments", json={"brand": "Sunlu", "material": "PLA+", "color_name": "Pink", "qty": 1, "colors": ["#FF66AAFF"]}).json
+    uid = f["units"][0]["id"]
+    with conn() as c:
+        c.execute("INSERT INTO printers (name, serial, mode) VALUES ('H2S', 'TESTSERIAL1', 'lan')")
+        pid = c.execute("SELECT id FROM printers WHERE serial='TESTSERIAL1'").fetchone()[0]
+        c.execute("INSERT INTO tags (tag_key, tray_uuid, filament_ref, unit_id, full_weight_g, remain_pct) VALUES ('K1','K1',?,?,1000,90)", (f["id"], uid))
+        slots = {"0:0": {"tag_key": "K1", "unit_id": uid, "filament_ref": f["id"]}, "0:1": {"tag_key": None, "unit_id": None, "filament_ref": None}}
+        usage = [{"tag_key": "K1", "grams": 30.0, "ams_g": 30.0, "unit_id": uid, "filament_ref": f["id"], "slot": [0, 0], "source": "ams"}]
+        c.execute("""INSERT INTO print_jobs (printer_id, job_key, name, started, ended, result, usage, slots, end_percent)
+                     VALUES (?,?,?,?,?,?,?,?,100)""", (pid, "t", "Testdruck", "2030-01-01T10:00:00", "2030-01-01T11:00:00", "fertig",
+                                                         json.dumps(usage), json.dumps(slots)))
+        c.execute("UPDATE spool_units SET remaining_g=970 WHERE id=?", (uid,))
+        from datetime import datetime, timezone
+        utc = lambda s: datetime.fromisoformat(s).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")  # noqa: E731
+        c.execute("INSERT INTO settings(key,value) VALUES('tasks_since','2029-01-01T00:00:00') ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+        c.execute("""INSERT INTO cloud_tasks (id, device_id, title, status, start, end, mapping) VALUES (1, 'TESTSERIAL1', 'Testdruck', 2, ?, ?, ?)""",
+                  (utc("2030-01-01T10:01:00"), utc("2030-01-01T11:00:00"),
+                   json.dumps([{"ams": 0, "weight": 34.5}, {"ams": 1, "weight": 12}])))
+        t = c.execute("SELECT * FROM cloud_tasks WHERE id=1").fetchone()
+        assert tasks.book(c, t)
+    u = client.get(f"/api/units/{uid}").json
+    assert round(u["remaining_g"], 1) == 965.5          # 970 − (34,5 − 30)
+    job = [j for j in client.get("/api/ams/jobs").json if j["name"] == "Testdruck"][0]
+    assert job["usage_src"] == "slicer" and job["unassigned"] == 1
+    idx = [i for i, e in enumerate(job["usage"]) if e.get("unassigned")][0]
+    assert client.post(f"/api/jobs/{job['id']}/assign", json={"index": idx, "filament_id": f["id"]}).json["ok"]
+    assert round(client.get(f"/api/units/{uid}").json["remaining_g"], 1) == 953.5
+
+
+def test_backup(client):
+    r = client.post("/api/backups").json
+    assert r["ok"] and r["name"].endswith(".tar.gz")
+    assert any(f["name"] == r["name"] for f in client.get("/api/backups").json["files"])
+
+
+def test_export_import_roundtrip(client):
+    data = json.loads(client.get("/api/export").get_data(as_text=True))
+    assert "units" in data["filaments"][0]
+    before = len(client.get("/api/filaments").json)
+    assert client.post("/api/import?replace=1", json=data).json["ok"]
+    after = client.get("/api/filaments").json
+    assert len(after) == before
+    assert sum(len(f["units"]) for f in after) == sum(len(f["units"]) for f in data["filaments"])
+
+
+def test_short_links(client):
+    assert client.get("/s/12").location.endswith("/?unit=12")
+    assert client.get("/f/3").location.endswith("/?fil=3")

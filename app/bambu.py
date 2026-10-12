@@ -52,11 +52,43 @@ def set_setting(c, key, value):
 _cat = None
 
 
+CATALOG_PATHS = (DATA_DIR / "catalog" / "bambu.json", BASE / "catalog" / "bambu.json")
+
+
 def bambu_catalog():
     global _cat
     if _cat is None:
-        _cat = json.loads((BASE / "catalog" / "bambu.json").read_text(encoding="utf-8"))
+        for p in CATALOG_PATHS:
+            if p.exists():
+                _cat = json.loads(p.read_text(encoding="utf-8"))
+                break
+        else:
+            return []  # (noch) nicht geladen – siehe ensure_catalog()
     return _cat
+
+
+def ensure_catalog(app=None):
+    """Fehlt der Bambu-Katalog (nicht im Image), beim Start im Hintergrund nach DATA_DIR laden."""
+    if any(p.exists() for p in CATALOG_PATHS) or os.environ.get("CATALOG_FETCH", "1") != "1":
+        return
+
+    def run():
+        global _cat
+        import catalog_fetch
+        for attempt in range(5):
+            try:
+                n = catalog_fetch.fetch(CATALOG_PATHS[0])
+                _cat = None
+                if app is not None:
+                    import app as appmod
+                    appmod._CATALOG = None
+                print(f"Bambu-Katalog geladen: {n} Farben", flush=True)
+                return
+            except Exception as e:  # noqa: BLE001
+                print(f"Bambu-Katalog: Download fehlgeschlagen ({e}), neuer Versuch …", flush=True)
+                time.sleep(30 * (attempt + 1))
+
+    threading.Thread(target=run, daemon=True, name="catalog").start()
 
 
 def _code(s):
@@ -189,7 +221,15 @@ def run_sync() -> dict:
             set_setting(c, "bambu_last_sync", now)
             set_setting(c, "bambu_error", None)
             set_setting(c, "bambu_token_valid", "1")
-            return {"ok": True, "total": len(seen), "new": new, "auto_linked": linked, "gone": gone, "at": now}
+            task_res = {}
+            if client.token or os.environ.get("BAMBU_MOCK_TASKS"):
+                try:
+                    import tasks
+                    task_res = tasks.sync(c, client)
+                except Exception as e:  # noqa: BLE001
+                    print("Druckaufträge:", e, flush=True)
+                    task_res = {"error": str(e)}
+            return {"ok": True, "total": len(seen), "new": new, "auto_linked": linked, "gone": gone, "at": now, "tasks": task_res}
     finally:
         _sync_lock.release()
 

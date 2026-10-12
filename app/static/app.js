@@ -124,9 +124,8 @@ function renderFil() {
   grid.innerHTML = list.map(f => {
     const low = f.qty <= (f.min_qty || 0) && f.min_qty > 0 || f.qty === 0;
     const tags = [
-      f.sealed && "OVP", f.refill && "Refill", f.spool && !f.refill && "Spule", f.sample && "Muster ✓",
-      f.location && "📍 " + f.location, f.weight_g != null && f.weight_g + " g",
-    ].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join("") + spoolTags(f) +
+      f.refill && "Refill", f.sample && "Muster ✓", f.location && "📍 " + f.location,
+    ].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join("") + (typeof unitTags === "function" ? unitTags(f) : "") + spoolTags(f) +
     (safeUrl(f.buy_url) ? `<a class="tag lnk buy" href="${esc(safeUrl(f.buy_url))}" target="_blank" rel="noopener noreferrer" title="Nachkaufen: ${esc(hostOf(safeUrl(f.buy_url)))}">🛒</a>` : "");
     return `<article class="card" data-id="${f.id}">
       <input type="checkbox" class="sel" ${state.sel.has(f.id) ? "checked" : ""} aria-label="auswählen">
@@ -194,7 +193,7 @@ const TCOLS = [
   { k: "refill", t: "Refill", s: f => +f.refill, tog: true },
   { k: "sample", t: "Muster", s: f => +f.sample, tog: true },
   { k: "location", t: "Lagerort", s: f => (f.location || "~").toLowerCase() },
-  { k: "rfid", t: "RFID / Rest", s: f => rfidOf(f).reduce((a, x) => a + (x.grams || 0), 0), num: true },
+  { k: "rfid", t: "Spulen / Rest", s: f => (f.units || []).reduce((a, u) => a + (u.status !== "empty" ? u.remaining_g || 0 : 0), 0), num: true },
   { k: "last_check", t: "Geprüft", s: f => f.last_check || "" },
 ];
 function renderTable(list) {
@@ -219,7 +218,7 @@ function renderTable(list) {
         <td class="num nolink"><div class="qty"><button data-d="-1">−</button><span class="n ${f.qty === 0 ? "zero" : ""}">${f.qty}</span><button data-d="1">+</button></div></td>
         ${["sealed", "spool", "refill", "sample"].map(k => `<td class="c nolink"><input type="checkbox" class="tog" data-f="${k}" ${f[k] ? "checked" : ""}></td>`).join("")}
         <td>${esc(f.location || "")}</td>
-        <td>${sp.length ? sp.map(x => `<span class="spoolpill" title="${x.kind === "tag" ? "AMS-Tag" : "Cloud"} ${esc(x.rfid || "–")}">${barI(x)}${x.loc ? `<b>${esc(x.loc.split(" · ")[0])}</b>` : ""}</span>`).join("") : `<span class="muted">–</span>`}</td>
+        <td>${typeof unitCell === "function" ? unitCell(f) : ""}</td>
         <td class="mono">${fmtDate(f.last_check)}</td>
       </tr>`;
     }).join("")}</tbody></table></div>`;
@@ -499,8 +498,7 @@ $("#amsLive").addEventListener("click", async e => {
   const b = e.target.closest("[data-empty]"); if (!b) return;
   const f = state.fil.find(x => x.id === +b.dataset.fid);
   if (!confirm(`„${f ? f.color_name + " · " + f.material : "Spule"}“ ist leer?\n\nBestand wird um 1 reduziert und der Tag freigegeben, damit du ihn der nächsten Spule zuordnen kannst.`)) return;
-  await api(`/api/filaments/${b.dataset.fid}/adjust`, { method: "POST", body: JSON.stringify({ delta: -1 }) });
-  await api(`/api/ams/rfid/${encodeURIComponent(b.dataset.empty)}/link`, { method: "POST", body: JSON.stringify({ filament_id: null }) });
+  await api(`/api/ams/rfid/${encodeURIComponent(b.dataset.empty)}/empty`, { method: "POST" });
   await refreshAll(); toast("Bestand −1, Tag ist frei");
 });
 $("#amsLive").addEventListener("change", e => { if (e.target.matches(".slotlink")) linkTag(e.target.dataset.key, e.target.value ? +e.target.value : null); });
@@ -725,6 +723,7 @@ async function load() {
   [state.fil, state.mat] = await Promise.all([api("/api/filaments"), api("/api/materials")]);
   fillFilters(); renderFil(); renderMat();
   loadBambu().catch(() => {}); loadAms().catch(() => {});
+  if (typeof afterLoad === "function") afterLoad();
 }
 
 /* ---------- Tabs / Toolbar ---------- */
@@ -733,6 +732,7 @@ function setTab(t) {
   $$(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
   $$(".tab").forEach(s => s.hidden = s.id !== "tab-" + t);
   if (t === "bambu" && state.fil.length) { loadBambu().catch(() => {}); loadAms().catch(() => {}); }
+  if (t === "overview" && typeof loadOverview === "function") loadOverview().catch(() => {});
   if (t === "printer") { loadStatus().catch(() => {}); loadJobs().catch(() => {}); if (!state.live.length) loadAms().catch(() => {}); }
 }
 $$(".tabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
@@ -834,6 +834,7 @@ function openFil(f) {
   setPhoto(f?.image);
   $(".photo .file-btn").hidden = !f;
   renderRfidBox(); updLinks(filForm);
+  if (typeof onOpenFil === "function") onOpenFil(f);
   filDlg.showModal();
   if (!f) $("#catQ").focus();
 }
@@ -877,6 +878,7 @@ filForm.onsubmit = async e => {
   }
   if (body.last_check === "") body.last_check = null;
   body.buy_url = safeUrl(body.buy_url); body.manufacturer_url = safeUrl(body.manufacturer_url);
+  if (typeof beforeSaveFil === "function") beforeSaveFil(body);
   if (editing) Object.assign(editing, await api(`/api/filaments/${editing.id}`, { method: "PUT", body: JSON.stringify(body) }));
   else state.fil.push(await api("/api/filaments", { method: "POST", body: JSON.stringify(body) }));
   filDlg.close(); fillFilters(); renderFil(); toast("Gespeichert");
@@ -1055,8 +1057,9 @@ function renderJobs() {
       <td class="strong">${esc(j.name || "–")}</td><td>${esc(j.printer || "")}</td>
       <td>${fmtTime(j.started)}</td><td>${j.ended ? fmtDur(j.minutes) : `<span class="pill run">läuft</span>`}</td>
       <td>${j.result ? `<span class="pill ${{ fertig: "done", fehlgeschlagen: "bad", abgebrochen: "pause" }[j.result] || ""}">${esc(j.result)}</span>` : "–"}</td>
-      <td>${j.usage.length ? j.usage.map(u => `<span class="useg">${u.filament ? swatchHTML({ colors: u.filament.colors }, { hex: false, img: false }) : ""}${esc(u.filament ? u.filament.color_name : shortKey(u.tag_key))} <b>${u.grams} g</b></span>`).join("") : `<span class="muted">${j.ended ? "–" : ""}</span>`}</td>
-    </tr>`).join("") : `<tr><td colspan="6" class="muted">Noch keine Drucke aufgezeichnet – die Historie beginnt mit dem ersten Druck nach der Einrichtung.</td></tr>`;
+      <td>${j.usage.length ? j.usage.map((u, i) => typeof usageChip === "function" ? usageChip(j, u, i) : "").join("") : `<span class="muted">${j.ended ? "–" : ""}</span>`}${j.usage_src === "slicer" ? `<small class="srcnote">Slicer-Gramm</small>` : j.usage.length ? `<small class="srcnote">AMS-Schätzung</small>` : ""}</td>
+      <td class="num">${j.cost ? `<span title="Material ${j.cost.material} · Strom ${j.cost.energy}${j.cost.grams_without_price ? ` · ${j.cost.grams_without_price} g ohne Preis` : ""}">${fmtMoney(j.cost.total)}</span>` : "–"}</td>
+    </tr>`).join("") : `<tr><td colspan="7" class="muted">Noch keine Drucke aufgezeichnet – die Historie beginnt mit dem ersten Druck nach der Einrichtung.</td></tr>`;
 }
 loadStatus();
 
@@ -1128,6 +1131,9 @@ applyTheme(document.documentElement.dataset.theme || "dark");
 { // Start-Parameter (PWA-Kurzbefehle): ?tab=printer&view=check
   const q = new URLSearchParams(location.search);
   if (q.get("tab")) state.tab = q.get("tab");
+  if (q.get("unit")) state.openUnit = +q.get("unit");
+  if (q.get("fil")) state.openFil = +q.get("fil");
+  if (q.get("unit") || q.get("fil")) { state.tab = "filaments"; history.replaceState(null, "", "/"); }
   if (["grid", "table", "check"].includes(q.get("view"))) {
     state.view = q.get("view");
     $$("button[data-view]").forEach(x => x.classList.toggle("active", x.dataset.view === state.view));
