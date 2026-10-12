@@ -325,6 +325,8 @@ small.err { display: block; color: var(--danger); }
 .pill.done, .pill.idle { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
 .pcard { margin-bottom: 14px; }
 .pgrid { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr); gap: 18px; align-items: start; }
+.pgrid > * { min-width: 0; }
+.pcard { min-width: 0; overflow-wrap: anywhere; }
 .pjob { display: flex; gap: 18px; align-items: center; padding: 6px 0; }
 .pjob.idle { flex-direction: column; align-items: flex-start; gap: 4px; }
 .pidle { font-size: 26px; font-weight: 700; }
@@ -372,7 +374,7 @@ small.err { display: block; color: var(--danger); }
 .jobs { margin-top: 4px; }
 .useg { display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; white-space: nowrap; font-size: 12.5px; }
 .useg .swatch { width: 14px; height: 14px; border-radius: 50%; }
-@media (max-width: 900px) { .pgrid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .pgrid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) {
   .pstat { order: 4; width: 100%; justify-content: flex-start; margin-left: 0; }
   .ring { width: 104px; height: 104px; }
@@ -549,8 +551,9 @@ small.err { display: block; color: var(--danger); }
   .ptemp { padding: 8px; }
   .ptemp b { font-size: 19px; }
   .pinfo { grid-template-columns: repeat(2, 1fr); }
-  .pams { flex-wrap: nowrap; overflow-x: auto; }
-  .pslot { flex: none; }
+  .pams { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pslot { width: auto; min-width: 0; }
+  .ptemps { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 }
 
 /* Theme-Umschalter */
