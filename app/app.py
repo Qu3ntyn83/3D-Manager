@@ -26,6 +26,14 @@ FIL_FIELDS = ["brand", "material", "color_name", "official_name", "sku", "qty", 
 MAT_FIELDS = ["qty", "category", "description", "thickness", "location", "notes", "min_qty",
               "kind", "manufacturer", "manufacturer_url", "buy_url", "price", "ordered_at"]
 BOOL = {"sealed", "spool", "refill", "sample"}
+# per Massenbearbeitung änderbar (nicht: Farbe, Name, ID, Bestand, Bild)
+BULK_FIELDS = {
+    "filaments": ["brand", "material", "location", "min_qty", "buy_url", "manufacturer_url", "net_weight_g", "tare_g", "price",
+                  "spool", "refill", "sample", "notes"],  # OVP ergibt sich aus den einzelnen Spulen
+    "materials": ["category", "location", "min_qty", "manufacturer", "manufacturer_url", "buy_url", "price", "thickness", "notes"],
+}
+PROFILE_KEYS = {"nozzle_min", "nozzle_max", "bed_min", "bed_max", "dry_temp", "dry_hours", "open_days", "k_factor", "flow_ratio",
+                "max_vol_speed", "notes"}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS filaments (
@@ -218,7 +226,52 @@ def _crud(table, fields, kind):
             db().commit()
         return get(item_id)
 
+    def bulk():
+        """Mehrere Einträge auf einmal ändern. Nur übergebene Felder werden gesetzt; null leert ein Feld.
+        {"ids": [...], "set": {...}, "profile": {k: wert|null}, "notes_append": "...",
+         "unit_price": true  → Preis auch auf alle vorhandenen Spulen schreiben,
+         "sealed_weight": true → Nettogewicht auch für volle OVP-Spulen übernehmen}"""
+        b = request.get_json(force=True) or {}
+        ids = [int(i) for i in b.get("ids") or [] if str(i).isdigit()]
+        if not ids:
+            abort(400, "keine Auswahl")
+        allowed = [f for f in BULK_FIELDS.get(table, []) if f in fields]
+        c = _clean(b.get("set") or {}, allowed)
+        prof = b.get("profile") if table == "filaments" and isinstance(b.get("profile"), dict) else None
+        q = ",".join("?" * len(ids))
+        if c:
+            db().execute(f"UPDATE {table} SET {','.join(k + '=?' for k in c)} WHERE id IN ({q})", [*c.values(), *ids])
+        note = (b.get("notes_append") or "").strip()
+        if note:
+            db().execute(f"UPDATE {table} SET notes = CASE WHEN notes IS NULL OR notes='' THEN ? ELSE notes || char(10) || ? END WHERE id IN ({q})",
+                         [note, note, *ids])
+        if prof:
+            for r in db().execute(f"SELECT id, profile FROM filaments WHERE id IN ({q})", ids).fetchall():
+                try:
+                    cur = json.loads(r["profile"] or "{}") or {}
+                except ValueError:
+                    cur = {}
+                for k, v in prof.items():
+                    if k not in PROFILE_KEYS:
+                        continue
+                    if v in (None, ""):
+                        cur.pop(k, None)
+                    else:
+                        cur[k] = v if k == "notes" else float(v)
+                db().execute("UPDATE filaments SET profile=? WHERE id=?", (json.dumps(cur) if cur else None, r["id"]))
+        db().commit()
+        if table == "filaments" and (b.get("unit_price") and "price" in c or b.get("sealed_weight") and c.get("net_weight_g")):
+            with uconn() as uc:
+                if b.get("unit_price") and "price" in c:
+                    uc.execute(f"UPDATE spool_units SET price=? WHERE filament_id IN ({q})", [c["price"], *ids])
+                if b.get("sealed_weight") and c.get("net_weight_g"):
+                    uc.execute(f"""UPDATE spool_units SET initial_g=?, remaining_g=? WHERE filament_id IN ({q})
+                                   AND status='sealed' AND (remaining_g IS NULL OR remaining_g=initial_g)""",
+                               [c["net_weight_g"], c["net_weight_g"], *ids])
+        return jsonify({"ok": True, "count": len(ids), "fields": list(c) + (["profile"] if prof else []) + (["notes"] if note else [])})
+
     base = f"/api/{table}"
+    app.add_url_rule(f"{base}/bulk", f"{table}_bulk", bulk, methods=["POST"])
     app.add_url_rule(base, f"{table}_list", list_, methods=["GET"])
     app.add_url_rule(base, f"{table}_create", create, methods=["POST"])
     app.add_url_rule(f"{base}/<int:item_id>", f"{table}_get", get, methods=["GET"])

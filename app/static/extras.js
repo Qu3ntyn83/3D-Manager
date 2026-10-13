@@ -7,7 +7,7 @@ const fmtMoney = v => v == null ? "–" : `${Number(v).toLocaleString("de-DE", {
 const fmtG = g => g == null ? "–" : g >= 1000 ? `${(g / 1000).toLocaleString("de-DE", { maximumFractionDigits: 2 })} kg` : `${Math.round(g)} g`;
 const fmtDay = d => d ? new Date(d.length > 10 ? d : d + "T00:00").toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "–";
 const daysSince = d => d ? Math.floor((Date.now() - new Date(d.slice(0, 10) + "T00:00").getTime()) / 864e5) : null;
-const STATUS = { sealed: "OVP", open: "offen", empty: "leer" };
+const STATUS = { open: "offen", empty: "leer" };
 
 async function afterLoad() {
   try { state.settings = await api("/api/settings"); } catch {}
@@ -556,4 +556,75 @@ $("#nfcFoot").addEventListener("click", e => {
       nfcLast.t = state.rfid.find(x => x.key === t.key) || t; renderNfc();
     });
   }
+});
+
+/* ---------- Massenbearbeitung (Filament) ---------- */
+const BULK_NUM = new Set(["min_qty", "price", "net_weight_g", "tare_g"]);
+function bulkSel() { return state.fil.filter(f => state.sel.has(f.id)); }
+function commonVal(list, get) {
+  const vals = list.map(get).map(v => v === undefined ? null : v);
+  return vals.every(v => v === vals[0]) ? vals[0] : undefined;   // undefined = verschieden
+}
+$("#bulkAll").onclick = () => {
+  const vis = $$("#filGrid [data-id]").map(e => +e.dataset.id);
+  vis.forEach(id => state.sel.add(id)); renderFil();
+  toast(`${state.sel.size} ausgewählt`);
+};
+$("#bulkEdit").onclick = () => {
+  const list = bulkSel(); if (!list.length) return;
+  const f = $("#bulkForm"); f.reset();
+  $("#bulkTitle").textContent = `${list.length} Filament${list.length > 1 ? "e" : ""} bearbeiten`;
+  const names = list.map(x => `${x.color_name} (${x.brand} ${x.material})`);
+  $("#bulkWho").textContent = names.slice(0, 6).join(", ") + (names.length > 6 ? ` und ${names.length - 6} weitere` : "");
+  const ph = (inp, v) => { inp.value = ""; inp.placeholder = v === undefined ? "verschieden – unverändert" : v === null || v === "" ? "leer – unverändert" : `alle: ${String(v).replace(".", ",")}`; };
+  $$("[data-bs]", f).forEach(i => ph(i, commonVal(list, x => x[i.dataset.bs])));
+  const fam = commonVal(list, x => familyOf(x.material));
+  $$("[data-bp]", f).forEach(i => {
+    const k = i.dataset.bp, v = commonVal(list, x => (x.profile || {})[k] ?? null);
+    ph(i, v);
+    if (v === null && fam !== undefined && famProfile(list[0].material)[k] != null && famProfile(list[0].material)[k] !== "") i.placeholder = `Richtwert ${fam}: ${String(famProfile(list[0].material)[k]).replace(".", ",")}`;
+  });
+  $$("[data-bb]", f).forEach(sel => {
+    const v = commonVal(list, x => !!x[sel.dataset.bb]);
+    sel.value = ""; sel.options[0].textContent = v === undefined ? "unverändert" : `unverändert: ${v ? "ja" : "nein"}`; sel.title = v === undefined ? "gemischt" : "";
+  });
+  $("#bulkNote").value = ""; bulkSummary();
+  $("#bulkDlg").showModal();
+};
+function bulkPayload() {
+  const f = $("#bulkForm"), set = {}, profile = {};
+  const val = (i, num) => {
+    const v = i.value.trim(); if (!v) return undefined;
+    if (v === "-") return null;
+    if (!num) return v;
+    const n = Number(v.replace(",", ".")); return Number.isFinite(n) ? n : NaN;
+  };
+  let bad = null;
+  $$("[data-bs]", f).forEach(i => { const v = val(i, BULK_NUM.has(i.dataset.bs)); if (v !== undefined) { if (Number.isNaN(v)) bad = i; else set[i.dataset.bs] = v; } });
+  $$("[data-bp]", f).forEach(i => { const v = val(i, i.dataset.bp !== "notes"); if (v !== undefined) { if (Number.isNaN(v)) bad = i; else profile[i.dataset.bp] = v; } });
+  $$("[data-bb]", f).forEach(s => { if (s.value !== "") set[s.dataset.bb] = s.value === "1"; });
+  return { set, profile, note: $("#bulkNote").value.trim(), bad };
+}
+const BULK_LABEL = { brand: "Marke", material: "Material", location: "Lagerort", min_qty: "Mindestbestand", price: "Preis", net_weight_g: "Netto",
+  tare_g: "Tara", manufacturer_url: "Hersteller-Link", buy_url: "Shop-Link", sealed: "OVP", spool: "Spule", refill: "Refill", sample: "Muster" };
+function bulkSummary() {
+  const { set, profile, note } = bulkPayload();
+  const parts = [...Object.keys(set).map(k => BULK_LABEL[k] || k), ...(Object.keys(profile).length ? ["Profil (" + Object.keys(profile).length + ")"] : []), ...(note ? ["Notiz"] : [])];
+  $("#bulkSummary").textContent = parts.length ? "Ändert: " + parts.join(", ") : "Noch nichts geändert";
+  $("#bulkSave").disabled = !parts.length;
+}
+$("#bulkForm").addEventListener("input", bulkSummary);
+$("#bulkForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const { set, profile, note, bad } = bulkPayload();
+  if (bad) { bad.focus(); toast("Bitte eine Zahl eingeben"); return; }
+  const ids = [...state.sel];
+  try {
+    const r = await api("/api/filaments/bulk", { method: "POST", body: JSON.stringify({
+      ids, set, profile: Object.keys(profile).length ? profile : undefined, notes_append: note || undefined,
+      unit_price: $("#bulkUnitPrice").checked, sealed_weight: $("#bulkSealedW").checked }) });
+    $("#bulkDlg").close();
+    await refreshAll();
+    toast(`${r.count} Filament${r.count > 1 ? "e" : ""} geändert`);
+  } catch (err) { toast("Fehler: " + err.message); }
 });

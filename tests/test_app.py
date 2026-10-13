@@ -148,3 +148,24 @@ def test_nfc_scan_full_read_creates_uuid_key(client):
     t = [x for x in client.get("/api/ams/rfid").json if x["key"] == r["key"]][0]
     assert t["claim_color"] == "00AE42FF" and t["full_weight_g"] == 1000
     assert client.post("/api/nfc/scan", json={"uid": "zz"}).status_code == 400
+
+
+def test_bulk_edit_filaments(client):
+    mk = lambda n: client.post("/api/filaments", json={"brand": "Bulk", "material": "PETG", "color_name": n, "qty": 1, "colors": ["#123456FF"],
+                                                       "profile": {"nozzle_min": 230, "notes": "alt"}}).json  # noqa: E731
+    a, b = mk("A"), mk("B")
+    r = client.post("/api/filaments/bulk", json={"ids": [a["id"], b["id"]], "set": {"price": "21.99", "location": "Regal 3", "net_weight_g": 1000},
+                                                  "profile": {"nozzle_max": 250, "notes": None}, "notes_append": "Charge 2026",
+                                                  "unit_price": True, "sealed_weight": True}).json
+    assert r["ok"] and r["count"] == 2
+    for f in (a, b):
+        g = client.get(f"/api/filaments/{f['id']}").json
+        assert g["price"] == 21.99 and g["location"] == "Regal 3" and g["color_name"] in ("A", "B")
+        assert g["profile"] == {"nozzle_min": 230, "nozzle_max": 250.0}
+        assert g["notes"].endswith("Charge 2026")
+        assert all(u["price"] == 21.99 for u in g["units"])
+    # nicht erlaubte Felder werden ignoriert, null leert
+    client.post("/api/filaments/bulk", json={"ids": [a["id"]], "set": {"color_name": "X", "qty": 9, "location": None}})
+    g = client.get(f"/api/filaments/{a['id']}").json
+    assert g["color_name"] == "A" and g["qty"] == 1 and g["location"] is None
+    assert client.post("/api/filaments/bulk", json={"ids": []}).status_code == 400
