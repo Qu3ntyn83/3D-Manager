@@ -65,8 +65,9 @@ function filtered() {
   let list = state.fil.filter(f => {
     if (state.brand && f.brand !== state.brand) return false;
     if (state.material && f.material !== state.material) return false;
-    const hay = `${f.brand} ${f.material} ${f.color_name} ${f.official_name} ${f.sku} ${f.location} ${f.notes} ${f.colors.join(" ")} ${(f.spools || []).map(s => s.rfid + " " + s.tray_id_name).join(" ")}`.toLowerCase();
-    return terms.every(t => hay.includes(t));
+    const hay = `${f.brand} ${f.material} ${f.color_name} ${f.official_name} ${f.sku} ${f.location} ${f.notes} ${f.colors.join(" ")} ${(f.spools || []).map(s => s.rfid + " " + s.tray_id_name).join(" ")} ${rfidOf(f).map(s => (s.rfid || "") + " " + (s.loc || "")).join(" ")}`.toLowerCase();
+    const hasTag = rfidOf(f).length > 0;
+    return terms.every(t => t === "rfid" ? hasTag : t === "ohne-rfid" || t === "!rfid" ? !hasTag : hay.includes(t));
   });
   const by = {
     material: (a, b) => a.material.localeCompare(b.material) || hue(a.colors[0]) - hue(b.colors[0]),
@@ -98,14 +99,18 @@ function rfidOf(f) {
 }
 function spoolTags(f) {
   const sp = rfidOf(f);
-  if (!sp.length) return "";
-  const known = sp.filter(s => s.grams != null);
-  const g = known.reduce((a, s) => a + s.grams, 0);
-  const ams = sp.filter(s => s.loc).map(s => s.loc);
-  const mismatch = sp.length > f.qty;
-  return `<span class="tag rfid" title="${sp.map(s => `${s.kind === "tag" ? "AMS-Tag" : "Cloud"} ${s.rfid || "–"} · ${s.grams ?? "?"} g`).join("\n")}">◉ ${sp.length} Tag${sp.length > 1 ? "s" : ""}${known.length ? ` · ${g} g` : ""}</span>` +
-    ams.map(a => `<span class="tag ams">${esc(a)}</span>`).join("") +
-    (mismatch ? `<span class="tag low" title="Mehr verlinkte Spulen als Bestand">Bestand prüfen</span>` : "");
+  return sp.length > f.qty ? `<span class="tag low" title="Mehr verlinkte Spulen als Bestand">Bestand prüfen</span>` : "";
+}
+/* Markierung „RFID zugewiesen“ – im AMS mit Slot */
+function rfidFlag(f, mini = false) {
+  const sp = rfidOf(f);
+  if (!sp.length) return mini ? `<span class="rflag none" title="Kein RFID-Tag zugewiesen">–</span>` : "";
+  const ams = [...new Set(sp.filter(s => s.loc).map(s => s.loc.split(" · ")[0]))];
+  const known = sp.filter(s => s.grams != null), g = known.reduce((a, s) => a + s.grams, 0);
+  const title = `RFID zugewiesen (${sp.length})${known.length ? ` · ${g} g` : ""}\n` +
+    sp.map(s => `${s.kind === "tag" ? "Tag" : "Cloud"} ${(s.rfid || "–").slice(0, 12)}${s.loc ? " · " + s.loc : ""}${s.grams != null ? " · " + s.grams + " g" : ""}`).join("\n");
+  const label = ams.length ? ams.join(" · ") : mini ? "RFID" : `RFID${sp.length > 1 ? " ×" + sp.length : ""}`;
+  return `<span class="rflag ${ams.length ? "live" : ""}" title="${esc(title)}"><i aria-hidden="true">◉</i>${esc(label)}</span>`;
 }
 const barI = s => {
   const p = s.percent ?? (s.total && s.grams != null ? Math.round(s.grams / s.total * 100) : null);
@@ -129,7 +134,7 @@ function renderFil() {
     (safeUrl(f.buy_url) ? `<a class="tag lnk buy" href="${esc(safeUrl(f.buy_url))}" target="_blank" rel="noopener noreferrer" title="Nachkaufen: ${esc(hostOf(safeUrl(f.buy_url)))}">🛒</a>` : "");
     return `<article class="card" data-id="${f.id}">
       <input type="checkbox" class="sel" ${state.sel.has(f.id) ? "checked" : ""} aria-label="auswählen">
-      ${swatchHTML(f)}
+      ${swatchHTML(f)}${rfidFlag(f)}
       <div class="body">
         <div class="name">${esc(f.color_name)}</div>
         <div class="meta">${esc(f.material)} · ${esc(f.brand)}${f.sku ? ` · <code>${esc(f.sku)}</code>` : ""}</div>
@@ -192,6 +197,7 @@ const TCOLS = [
   { k: "spool", t: "Spule", s: f => +f.spool, tog: true },
   { k: "refill", t: "Refill", s: f => +f.refill, tog: true },
   { k: "sample", t: "Muster", s: f => +f.sample, tog: true },
+  { k: "rfidf", t: "RFID", s: f => rfidOf(f).length ? (rfidOf(f).some(s => s.loc) ? 2 : 1) : 0, c: true },
   { k: "location", t: "Lagerort", s: f => (f.location || "~").toLowerCase() },
   { k: "rfid", t: "Spulen / Rest", s: f => (f.units || []).reduce((a, u) => a + (u.status !== "empty" ? u.remaining_g || 0 : 0), 0), num: true },
   { k: "last_check", t: "Geprüft", s: f => f.last_check || "" },
@@ -204,7 +210,7 @@ function renderTable(list) {
   const allSel = list.length && list.every(f => state.sel.has(f.id));
   grid.innerHTML = `<div class="table-wrap"><table class="tbl fil">
     <thead><tr><th><input type="checkbox" class="tsel-all" ${allSel ? "checked" : ""} aria-label="alle auswählen"></th>${TCOLS.map(c =>
-      `<th data-k="${c.k}" class="${c.num ? "num" : ""} ${c.tog ? "c" : ""} ${state.tsort.key === c.k ? "sorted" : ""}">${c.t}${state.tsort.key === c.k ? (state.tsort.dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
+      `<th data-k="${c.k}" class="${c.num ? "num" : ""} ${c.tog || c.c ? "c" : ""} ${state.tsort.key === c.k ? "sorted" : ""}">${c.t}${state.tsort.key === c.k ? (state.tsort.dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
     <tbody>${list.map(f => {
       const sp = rfidOf(f);
       const low = f.qty === 0 || (f.min_qty > 0 && f.qty <= f.min_qty);
@@ -217,6 +223,7 @@ function renderTable(list) {
         <td class="mono">${f.colors[0].slice(0, 7)}<span class="src src-${f.swatch_source}" title="${esc(SRC_LONG[f.swatch_source] || "")}"></span></td>
         <td class="num nolink"><div class="qty"><button data-d="-1">−</button><span class="n ${f.qty === 0 ? "zero" : ""}">${f.qty}</span><button data-d="1">+</button></div></td>
         ${["sealed", "spool", "refill", "sample"].map(k => `<td class="c nolink"><input type="checkbox" class="tog" data-f="${k}" ${f[k] ? "checked" : ""}></td>`).join("")}
+        <td class="c">${rfidFlag(f, true)}</td>
         <td>${esc(f.location || "")}</td>
         <td>${typeof unitCell === "function" ? unitCell(f) : ""}</td>
         <td class="mono">${fmtDate(f.last_check)}</td>
