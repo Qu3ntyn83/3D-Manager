@@ -10,6 +10,8 @@ Diese Dateien stammen aus fremden Projekten und stehen unter deren eigener Lizen
 | `app/static/vendor/qrcode.js` | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) von Kazuhiko Arase | MIT |
 | `app/static/vendor/jsQR.js` | [jsQR](https://github.com/cozmo/jsQR) | Apache-2.0 (siehe `app/static/vendor/LICENSE-jsQR`) |
 
+Schlüsselableitung und Blockformat der Bambu-RFID-Tags (`android/…/BambuTag.java`) folgen dem [RFID-Tag-Guide der Bambu Research Group](https://github.com/Bambu-Research-Group/RFID-Tag-Guide).
+
 Die Kommunikation mit der Bambu-Cloud und dem Drucker (MQTT) orientiert sich an der Dokumentation und dem Code von [ha-bambulab](https://github.com/greghesp/ha-bambulab), [ha-bambu-filaments](https://github.com/Timmes123/ha-bambu-filaments) und [OpenBambuAPI](https://github.com/Doridian/OpenBambuAPI).
 
 „Bambu Lab“, „Bambu Studio“ und „AMS“ sind Marken von Bambu Lab. Dieses Projekt ist nicht mit Bambu Lab verbunden.

@@ -412,6 +412,7 @@ import units  # noqa: E402
 import insights  # noqa: E402
 import tasks  # noqa: E402
 import backup  # noqa: E402
+import nfc  # noqa: E402
 from bambu import ensure_catalog  # noqa: E402
 
 app.register_blueprint(bambu_bp)
@@ -420,6 +421,7 @@ app.register_blueprint(units.bp)
 app.register_blueprint(insights.bp)
 app.register_blueprint(tasks.bp)
 app.register_blueprint(backup.bp)
+app.register_blueprint(nfc.bp)
 init_db()
 start_ams(app)
 units.init_schema()
