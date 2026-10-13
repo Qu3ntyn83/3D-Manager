@@ -83,6 +83,8 @@
     <div class="chips" id="matChips"></div>
     <div class="bulk" id="bulk" hidden>
       <span id="bulkCount"></span>
+      <button id="bulkEdit" class="primary">Bearbeiten …</button>
+      <button id="bulkAll" class="ghost">Alle angezeigten</button>
       <button id="bulkCheck">Als heute geprüft markieren</button>
       <button id="bulkClear" class="ghost">Auswahl aufheben</button>
     </div>
@@ -409,6 +411,58 @@
     <header class="dlg-head"><h2 id="nfcTitle">NFC-Tag</h2><button type="button" class="x" data-close>✕</button></header>
     <div id="nfcBody"></div>
     <footer class="dlg-foot" id="nfcFoot"></footer>
+  </form>
+</dialog>
+
+<!-- Massenbearbeitung -->
+<dialog id="bulkDlg" class="wide">
+  <form method="dialog" id="bulkForm">
+    <header class="dlg-head"><h2 id="bulkTitle">Mehrere bearbeiten</h2><button type="button" class="x" data-close>✕</button></header>
+    <p class="muted small" id="bulkWho"></p>
+    <p class="muted small">Nur ausgefüllte Felder werden geändert. <b>-</b> eingeben leert ein Feld (beim Profil gilt dann wieder der Richtwert der Materialfamilie). Grau = gemeinsamer Wert aller ausgewählten.</p>
+    <fieldset><legend>Allgemein</legend>
+      <div class="form-grid">
+        <label>Marke<input data-bs="brand" list="brandList" autocomplete="off"></label>
+        <label>Material<input data-bs="material" list="matList" autocomplete="off"></label>
+        <label>Lagerort<input data-bs="location" autocomplete="off"></label>
+        <label>Mindestbestand<input data-bs="min_qty" inputmode="numeric" autocomplete="off"></label>
+      </div>
+      <div class="bulk-flags">
+        <label>Spule<select data-bb="spool"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label><label>Refill<select data-bb="refill"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label><label>Muster gedruckt<select data-bb="sample"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>Preis &amp; Gewicht</legend>
+      <div class="form-grid">
+        <label>Preis je Spule<input data-bs="price" inputmode="decimal" autocomplete="off"></label>
+        <label>Netto voll (g)<input data-bs="net_weight_g" inputmode="numeric" autocomplete="off"></label>
+        <label>Leerspule / Tara (g)<input data-bs="tare_g" inputmode="numeric" autocomplete="off"></label>
+      </div>
+      <label class="inline"><input type="checkbox" id="bulkUnitPrice" checked> Preis auch auf alle vorhandenen Spulen dieser Sorten schreiben</label>
+      <label class="inline"><input type="checkbox" id="bulkSealedW" checked> Nettogewicht auch für volle OVP-Spulen übernehmen</label>
+    </fieldset>
+    <fieldset><legend>Druck- &amp; Trocknungsprofil</legend>
+      <div class="form-grid prof">
+        <label>Düse min °C<input data-bp="nozzle_min" inputmode="decimal" autocomplete="off"></label>
+        <label>Düse max °C<input data-bp="nozzle_max" inputmode="decimal" autocomplete="off"></label>
+        <label>Bett min °C<input data-bp="bed_min" inputmode="decimal" autocomplete="off"></label>
+        <label>Bett max °C<input data-bp="bed_max" inputmode="decimal" autocomplete="off"></label>
+        <label>Trocknen °C<input data-bp="dry_temp" inputmode="decimal" autocomplete="off"></label>
+        <label>Trocknen h<input data-bp="dry_hours" inputmode="decimal" autocomplete="off"></label>
+        <label>Offen max. Tage<input data-bp="open_days" inputmode="decimal" autocomplete="off"></label>
+        <label>K-Faktor / PA<input data-bp="k_factor" inputmode="decimal" autocomplete="off"></label>
+        <label>Flussrate<input data-bp="flow_ratio" inputmode="decimal" autocomplete="off"></label>
+        <label>Max. Vol.-Geschw. mm³/s<input data-bp="max_vol_speed" inputmode="decimal" autocomplete="off"></label>
+      </div>
+      <label>Profil-Notizen<input data-bp="notes" autocomplete="off"></label>
+    </fieldset>
+    <fieldset><legend>Links &amp; Notizen</legend>
+      <div class="form-grid links">
+        <label>Hersteller-Link<input data-bs="manufacturer_url" inputmode="url" autocomplete="off"></label>
+        <label>Bezugsquelle (Shop-Link)<input data-bs="buy_url" inputmode="url" autocomplete="off"></label>
+      </div>
+      <label>Notiz anhängen (wird an vorhandene Notizen angefügt)<input id="bulkNote" autocomplete="off"></label>
+    </fieldset>
+    <footer class="dlg-foot"><span class="muted small" id="bulkSummary"></span><span class="spacer"></span><button type="button" class="ghost" data-close>Abbrechen</button><button class="primary" id="bulkSave">Übernehmen</button></footer>
   </form>
 </dialog>
 

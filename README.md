@@ -9,6 +9,7 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 **Inventar**
 - Filament mit **Farbmuster pro Spule** – offizielle Bambu-Farbwerte (über die 5-stellige Bambu-ID), Community-Farbwerte für Sunlu, Anycubic, Polymaker, eSun u. v. m., Verläufe, Transparenz, Matt/Silk/Galaxy-Optik, eigenes Foto vom gedruckten Muster
 - Kacheln, **sortierbare Tabelle** und **Inventur-Modus** (große Zeilen, „heute geprüft“, Fortschritt)
+- **Massenbearbeitung:** mehrere Filamente auswählen (oder „Alle angezeigten“ nach Suche/Filter) → Preis, Gewicht, Lagerort, Links, Druck-/Trocknungsprofil usw. in einem Schritt setzen
 - OVP / Spule / Refill / Muster, Lagerort, Mindestbestand („nachkaufen“), Restgewicht, Notizen
 - Reiter **Material** (Holz, Acryl, Vinyl …) und **Zubehör** (Düsen, Druckplatten, Magnete …)
 - Pro Eintrag **Hersteller**, **Hersteller-Link** und **Bezugsquelle (Shop-Link)** – 🛒 direkt in der Liste
