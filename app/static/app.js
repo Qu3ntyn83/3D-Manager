@@ -23,7 +23,7 @@ const SRC_LONG = {
 };
 
 let state = {
-  fil: [], mat: [], spools: [], bstat: null, live: [], tags: [], sub: store.get("sub", "ams"), tab: store.get("tab", "filaments"), view: ["grid", "table", "check"].includes(store.get("view", "grid")) ? store.get("view", "grid") : "grid",
+  fil: [], mat: [], spools: [], bstat: null, live: [], tags: [], sub: store.get("sub", "ams"), tab: store.get("tab", "overview"), view: ["grid", "table", "check"].includes(store.get("view", "grid")) ? store.get("view", "grid") : "grid",
   tsort: store.get("tsort", { key: "", dir: 1 }),
   q: "", brand: "", material: store.get("material", ""), sort: store.get("sort", "material"), sel: new Set(),
 };
