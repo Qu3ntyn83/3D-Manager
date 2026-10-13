@@ -507,7 +507,7 @@ window.on3dmNfc = async d => {
 window.on3dmBack = () => {
   const open = [...document.querySelectorAll("dialog[open]")];
   if (open.length) { open[open.length - 1].close(); return true; }
-  if (state.tab !== "filaments") { setTab("filaments"); return true; }
+  if (state.tab !== "overview") { setTab("overview"); return true; }
   return false;
 };
 function renderNfc() {
