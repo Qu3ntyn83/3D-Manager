@@ -407,7 +407,7 @@ function renderRfidBox() {
     : `<p class="muted">Noch kein RFID-Tag zugeordnet. Jeder Tag lässt sich zuordnen – egal, was Bambu darüber meldet.</p>`;
   $("#rfidAdd").hidden = !tagItems(editing.id).length;
 }
-const shortKey = k => k.startsWith("UID:") ? "UID " + k.slice(4, 12) + "…" : k.slice(0, 10) + "…";
+const shortKey = k => /^(UID|NFC):/.test(k) ? "UID " + k.slice(4, 12) + "…" : k.slice(0, 10) + "…";
 $("#rfidList").addEventListener("click", async e => {
   if (!e.target.matches("[data-unlink-tag]")) return;
   await linkTag(e.target.closest(".rfidrow").dataset.key, null);

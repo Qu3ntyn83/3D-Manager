@@ -53,6 +53,8 @@
         <div class="lbl-sm">Werkzeuge</div>
         <a href="#" id="menuLabels">Etiketten drucken …</a>
         <a href="#" id="menuSettings">Einstellungen …</a>
+        <a href="#" id="menuApp" hidden>App: Server-Adresse …</a>
+        <a href="https://github.com/Qu3ntyn83/3D-Manager/releases/download/android/3D-Manager.apk" id="menuApk" hidden>Android-App mit NFC laden</a>
       </div>
     </details>
   </div>
@@ -398,6 +400,15 @@
     </div>
     <p class="muted small" id="weighHint"></p>
     <footer class="dlg-foot"><span class="spacer"></span><button type="button" class="ghost" data-close>Abbrechen</button><button class="primary">Übernehmen</button></footer>
+  </form>
+</dialog>
+
+<!-- NFC-Tag (Android-App) -->
+<dialog id="nfcDlg">
+  <form method="dialog">
+    <header class="dlg-head"><h2 id="nfcTitle">NFC-Tag</h2><button type="button" class="x" data-close>✕</button></header>
+    <div id="nfcBody"></div>
+    <footer class="dlg-foot" id="nfcFoot"></footer>
   </form>
 </dialog>
 

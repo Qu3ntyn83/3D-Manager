@@ -108,6 +108,15 @@ Ein Tag ist nur eine ID. Was Bambu über den Tag meldet (Material/Farbe), wird n
 - Voraussetzung für Füllstände: AMS-Option „Restmenge schätzen“ aktiv. Spulen ohne Tag liefern keinen Füllstand.
 - Optional: „neue Original-Bambu-Spulen nach Bambu-Angabe zuordnen“ (Standard aus).
 
+## Android-App mit NFC
+
+Handy-Browser können Bambu-Tags (MIFARE Classic) nicht lesen. Dafür gibt es die kleine **Android-App** (`android/`): Sie zeigt die normale Oberfläche und liest den Tag, sobald eine Spule ans Handy gehalten wird – auch wenn die App geschlossen ist.
+
+- **Download:** [3D-Manager.apk](https://github.com/Qu3ntyn83/3D-Manager/releases/download/android/3D-Manager.apk) (oder im Browser auf dem Handy unter ⋯ → „Android-App mit NFC laden“). Beim ersten Start die Adresse des 3D Manager eingeben, z. B. `http://192.168.178.42:8095`.
+- **Was gelesen wird:** immer die UID. Handys mit NXP-NFC-Chip (z. B. Pixel, viele Xiaomi/OnePlus) lesen zusätzlich die Bambu-Daten – Spulen-ID, Material, Farbe, Gewicht, Temperaturen, Produktionsdatum. Viele Samsung-Geräte unterstützen MIFARE Classic nicht; dort reicht die UID für die Zuordnung, Material/Farbe ergänzt das AMS.
+- **Ablauf:** Tag unbekannt → wird angelegt und lässt sich einer Inventar-Spule zuordnen. Tag bekannt → zeigt die Spule mit Restmenge, „Spule öffnen“. Bei offenem Scanner (⌗) mit „Inventur“ zählt der NFC-Scan wie ein QR-Code. Sieht das AMS den Tag später, werden beide Einträge automatisch zusammengeführt.
+- **Build:** GitHub Actions baut die APK bei Änderungen unter `android/` und legt sie im Release `android` ab. Für eine gleichbleibende Signatur (Updates ohne Neuinstallation) die Secrets `ANDROID_KEYSTORE_BASE64` und `ANDROID_KEYSTORE_PASSWORD` setzen.
+
 ## Handy & App-Installation
 
 - Volle PWA (Installieren-Knopf, Offline-Oberfläche) benötigt **HTTPS**, z. B. hinter einem Reverse Proxy (Caddy, Traefik, Nginx Proxy Manager).

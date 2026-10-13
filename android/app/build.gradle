@@ -1,0 +1,50 @@
+plugins {
+    id "com.android.application"
+}
+
+def vCode = (System.getenv("APP_VERSION_CODE") ?: "1") as int
+def vName = System.getenv("APP_VERSION_NAME") ?: "1.0"
+
+android {
+    namespace "io.github.qu3ntyn83.manager3d"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "io.github.qu3ntyn83.manager3d"
+        minSdk 24
+        targetSdk 34
+        versionCode vCode
+        versionName vName
+    }
+
+    signingConfigs {
+        release {
+            // Schlüssel kommt in GitHub Actions aus den Repository-Secrets; lokal fällt der Build auf Debug-Signatur zurück
+            def ks = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS") ?: "3dmanager"
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD") ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv("ANDROID_KEYSTORE_FILE") ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+}

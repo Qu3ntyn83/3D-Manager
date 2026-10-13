@@ -482,3 +482,78 @@ async function handleScan(text) {
     $("#scanLog").insertAdjacentHTML("afterbegin", `<div class="muted">Unbekannter Code: ${esc(text.slice(0, 60))}</div>`);
   }
 }
+
+/* ---------- Handy-NFC (Android-App „3D Manager“) ----------
+   Die App liest den Bambu-Tag und ruft window.on3dmNfc({uid, tray_uuid, type, detail, color, weight, …}) auf. */
+const inApp = typeof window.Android3DM !== "undefined";
+if (inApp) {
+  document.documentElement.classList.add("in-app");
+  const m = $("#menuApp"); m.hidden = false;
+  m.onclick = e => { e.preventDefault(); window.Android3DM.changeServer(); };
+}
+if (!inApp && /Android/i.test(navigator.userAgent)) $("#menuApk").hidden = false;
+let nfcLast = null;
+window.on3dmNfc = async d => {
+  if (typeof d === "string") try { d = JSON.parse(d); } catch { return; }
+  try {
+    const r = await api("/api/nfc/scan", { method: "POST", body: JSON.stringify(d) });
+    state.rfid = await api("/api/ams/rfid");
+    const t = state.rfid.find(x => x.key === r.key) || { key: r.key };
+    if ($("#scanDlg").open && t.unit_id) return handleScan(`/s/${t.unit_id}`);   // Inventur per NFC
+    if ($("#scanDlg").open && t.filament_ref) return handleScan(`/f/${t.filament_ref}`);
+    nfcLast = { t, d, r }; renderNfc();
+  } catch (e) { toast("NFC: " + e.message); }
+};
+window.on3dmBack = () => {
+  const open = [...document.querySelectorAll("dialog[open]")];
+  if (open.length) { open[open.length - 1].close(); return true; }
+  if (state.tab !== "filaments") { setTab("filaments"); return true; }
+  return false;
+};
+function renderNfc() {
+  const { t, d, r } = nfcLast, f = t.filament_ref ? state.fil.find(x => x.id === t.filament_ref) : null;
+  const u = f && t.unit_id ? (f.units || []).find(x => x.id === t.unit_id) : null;
+  const claimCol = d.color || t.claim_color;
+  const facts = [
+    d.weight ? `${d.weight} g` : null, d.diameter ? `${(+d.diameter).toFixed(2)} mm` : null,
+    d.nozzle_min ? `Düse\u00a0${d.nozzle_min}–${d.nozzle_max}\u00a0°C` : null, d.dry_temp ? `Trocknen\u00a0${d.dry_temp}\u00a0°C\u00a0/\u00a0${d.dry_hours}\u00a0h` : null,
+    d.prod_date ? `produziert ${esc(String(d.prod_date).replace(/_/g, "-").replace(/-(\d\d)-(\d\d)$/, " $1:$2"))}` : null,
+  ].filter(Boolean);
+  $("#nfcTitle").innerHTML = `NFC-Tag ${r.created ? `<span class="pill done">neu erfasst</span>` : ""}`;
+  $("#nfcBody").innerHTML = `
+    <div class="nfc-claim">
+      ${claimCol ? swatchHTML({ colors: ["#" + claimCol.slice(0, 8)] }, { hex: false, img: false }) : `<span class="sw0"></span>`}
+      <div><small class="muted">Tag meldet (nur Info)</small>
+        <b>${esc(d.detail || t.claims || d.type || "unbekannt")}</b>
+        <small class="mono">UID ${esc(d.uid || "–")}${(d.tray_uuid || t.rfid) ? " · " + esc((d.tray_uuid || t.rfid).slice(0, 12)) + "…" : ""}</small>
+        ${facts.length ? `<small class="muted">${facts.join(" · ")}</small>` : ""}</div>
+    </div>
+    ${d.mifare === false ? `<p class="muted small nfc-note">Dieses Handy kann die verschlüsselten Daten von MIFARE-Classic-Tags nicht lesen – nur die UID. Für die Zuordnung reicht das; Material und Farbe ergänzt das AMS, sobald die Spule einmal eingelegt war.</p>` : ""}
+    ${d.auth === false ? `<p class="muted small nfc-note">Kein Bambu-Tag (oder Schlüssel passen nicht) – nur die UID wird verwendet.</p>` : ""}
+    <div class="nfc-inv">
+      <small class="muted">Ist im Inventar</small>
+      ${f ? `<div class="nfc-fil">${swatchHTML({ colors: f.colors }, { hex: false, img: false })}
+          <div><b>${esc(f.color_name)}</b><small>${esc(f.brand)} · ${esc(f.material)}${u ? " · " + esc(u.code) : ""}</small>
+          ${u && u.remaining_g != null ? `<small>${barI({ grams: Math.round(u.remaining_g), total: u.initial_g })}</small>` : ""}</div></div>`
+        : `<p class="muted">Noch keiner Inventar-Spule zugeordnet.</p>`}
+    </div>`;
+  $("#nfcFoot").innerHTML = f
+    ? `<button type="button" class="ghost" data-nfc="relink">Anders zuordnen</button><span class="spacer"></span><button type="button" class="primary" data-nfc="open">Spule öffnen</button>`
+    : `<span class="spacer"></span><button type="button" class="ghost" data-close>Schließen</button><button type="button" class="primary" data-nfc="link">Inventar-Spule zuordnen</button>`;
+  $("#nfcFoot [data-close]")?.addEventListener("click", () => $("#nfcDlg").close());
+  if (!$("#nfcDlg").open) $("#nfcDlg").showModal();
+}
+$("#nfcFoot").addEventListener("click", e => {
+  const b = e.target.closest("[data-nfc]"); if (!b || !nfcLast) return;
+  const { t } = nfcLast;
+  if (b.dataset.nfc === "open") {
+    const f = state.fil.find(x => x.id === t.filament_ref); if (!f) return;
+    $("#nfcDlg").close(); setTab("filaments"); openFil(f);
+    if (t.unit_id) setTimeout(() => { const row = $(`.unitrow[data-uid="${t.unit_id}"]`); row?.classList.add("flash"); row?.scrollIntoView({ block: "center" }); }, 150);
+  } else {
+    pickFilament(`Tag ${shortKey(t.key)} zuordnen`, t.filament_ref || null, async fid => {
+      await linkTag(t.key, fid);
+      nfcLast.t = state.rfid.find(x => x.key === t.key) || t; renderNfc();
+    });
+  }
+});

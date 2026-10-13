@@ -1,5 +1,5 @@
 // 3D Manager – Service Worker: App-Shell offline, API immer live
-const CACHE = "3dm-shell-v8";
+const CACHE = "3dm-shell-v9";
 const SHELL = ["/", "/static/style.css", "/static/app.js", "/static/extras.js", "/static/vendor/qrcode.js", "/static/icons/icon-192.png", "/manifest.webmanifest"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {

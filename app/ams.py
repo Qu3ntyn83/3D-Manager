@@ -331,6 +331,11 @@ def update_tag(c, key, tr, pid, aid, tid, remain, ts):
                 last_seen=ts, printer_id=pid, ams_id=aid, tray_id=tid, in_ams=1)
     if remain is not None and remain >= 0:
         vals["remain_pct"] = remain
+    if not old and tr.get("tag_uid"):
+        # per Handy-NFC vorab erfasster Tag? → übernehmen statt doppelt anlegen
+        import nfc
+        if nfc.merge_nfc(c, key, tr.get("tag_uid"), tr.get("tray_uuid")):
+            old = c.execute("SELECT * FROM tags WHERE tag_key=?", (key,)).fetchone()
     if not old:
         ref, mode = None, None
         # Gleiche RFID in der Cloud-Bibliothek schon verlinkt? → übernehmen

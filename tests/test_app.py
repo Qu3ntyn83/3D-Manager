@@ -114,3 +114,37 @@ def test_export_import_roundtrip(client):
 def test_short_links(client):
     assert client.get("/s/12").location.endswith("/?unit=12")
     assert client.get("/f/3").location.endswith("/?fil=3")
+
+
+def test_nfc_scan_create_link_and_merge(client):
+    """Handy liest Tag ohne AMS → wird angelegt, zugeordnet und später mit dem AMS-Eintrag zusammengeführt."""
+    import ams
+    from bambu import conn
+    r = client.post("/api/nfc/scan", json={"uid": "75886b1d", "mifare": False}).json
+    assert r["created"] and r["key"] == "NFC:75886B1D"
+    f = client.post("/api/filaments", json={"brand": "Sunlu", "material": "PLA", "color_name": "Pink", "qty": 1, "colors": ["#FF66AAFF"]}).json
+    assert client.post("/api/ams/rfid/NFC:75886B1D/link", json={"filament_id": f["id"]}).json["ok"]
+    # zweiter Scan findet denselben Tag
+    r2 = client.post("/api/nfc/scan", json={"uid": "75886B1D"}).json
+    assert not r2["created"] and r2["key"] == "NFC:75886B1D"
+    # AMS meldet den Tag (tag_uid = UID + Nullen) → Eintrag übernimmt tray_uuid als Schlüssel, Zuordnung bleibt
+    uuid = "A0A1A2A3A4A5A6A7A8A9AAABACADAEAF"
+    with conn() as c:
+        ams.update_tag(c, uuid, {"tray_uuid": uuid, "tag_uid": "75886B1D00000000", "tray_type": "PLA", "tray_weight": "1000"},
+                       None, 0, 0, 80, "2030-01-01T00:00:00")
+        rows = c.execute("SELECT tag_key, filament_ref FROM tags WHERE tag_key IN (?, 'NFC:75886B1D')", (uuid,)).fetchall()
+    assert [(x["tag_key"], x["filament_ref"]) for x in rows] == [(uuid, f["id"])]
+    # Handy mit vollem Auslesen (tray_uuid) findet ihn ebenfalls
+    r3 = client.post("/api/nfc/scan", json={"uid": "75886B1D", "tray_uuid": uuid, "detail": "PLA Basic", "weight": 1000}).json
+    assert r3["key"] == uuid and not r3["created"]
+    t = [x for x in client.get("/api/ams/rfid").json if x["key"] == uuid][0]
+    assert t["filament_ref"] == f["id"] and t["unit_id"]
+
+
+def test_nfc_scan_full_read_creates_uuid_key(client):
+    r = client.post("/api/nfc/scan", json={"uid": "11223344", "tray_uuid": "00112233445566778899AABBCCDDEEFF",
+                                           "detail": "PETG Basic", "color": "00AE42FF", "weight": 1000}).json
+    assert r["created"] and r["key"] == "00112233445566778899AABBCCDDEEFF"
+    t = [x for x in client.get("/api/ams/rfid").json if x["key"] == r["key"]][0]
+    assert t["claim_color"] == "00AE42FF" and t["full_weight_g"] == 1000
+    assert client.post("/api/nfc/scan", json={"uid": "zz"}).status_code == 400
