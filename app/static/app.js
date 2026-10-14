@@ -252,6 +252,8 @@ function renderBambu() {
   const dot = $("#bambuDot");
   dot.className = "dot " + (!st.connected ? "" : st.error || !st.token_valid ? "bad" : "ok");
   dot.title = st.error || "";
+  const sb = $("#cloudSyncBtn"); sb.hidden = !st.connected;
+  sb.title = `Mit Bambu Filament-Cloud synchronisieren${st.last_sync ? " · zuletzt " + fmtTime(st.last_sync) : ""}`;
   const conn = $("#bbConn");
   if (st.connected && !loginStep) {
     conn.innerHTML = `<h3>Bambu Filament Manager</h3>
@@ -346,12 +348,21 @@ $("#bBody").addEventListener("click", async e => {
 });
 $("#bBody").addEventListener("change", e => { if (e.target.matches(".linksel")) linkSpool(+e.target.closest("tr").dataset.cid, e.target.value ? +e.target.value : null); });
 $("#bq").oninput = renderSpools; $("#bFilter").onchange = renderSpools;
-$("#bSync").onclick = async () => {
-  $("#bSync").disabled = true;
-  try { const r = await api("/api/bambu/sync", { method: "POST" }); toast(`${r.total} Spulen · ${r.new} neu · ${r.auto_linked} automatisch verlinkt`); }
-  catch { toast("Sync fehlgeschlagen – siehe Hinweis oben"); }
-  $("#bSync").disabled = false; await refreshAll();
-};
+async function cloudSync() {
+  const btns = [$("#bSync"), $("#cloudSyncBtn")];
+  if (btns[1].classList.contains("spin")) return;
+  btns.forEach(b => b.disabled = true); btns[1].classList.add("spin");
+  try {
+    const res = await fetch("/api/bambu/sync", { method: "POST" });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok || r.ok === false) toast("Sync fehlgeschlagen: " + (r.error || res.status));
+    else toast(`Bambu Cloud: ${r.total} Spulen · ${r.new} neu${r.tasks && r.tasks.booked ? ` · ${r.tasks.booked} Drucke gebucht` : ""}`);
+  } catch (e) { toast("Sync fehlgeschlagen: " + e.message); }
+  btns.forEach(b => b.disabled = false); btns[1].classList.remove("spin");
+  await refreshAll();
+}
+$("#bSync").onclick = cloudSync;
+$("#cloudSyncBtn").onclick = cloudSync;
 
 const post = async (url, body) => {
   const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
