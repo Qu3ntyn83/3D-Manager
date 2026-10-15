@@ -475,6 +475,7 @@ import tasks  # noqa: E402
 import backup  # noqa: E402
 import nfc  # noqa: E402
 import studio  # noqa: E402
+import stats  # noqa: E402
 from bambu import ensure_catalog  # noqa: E402
 
 app.register_blueprint(bambu_bp)
@@ -485,6 +486,7 @@ app.register_blueprint(tasks.bp)
 app.register_blueprint(backup.bp)
 app.register_blueprint(nfc.bp)
 app.register_blueprint(studio.bp)
+app.register_blueprint(stats.bp)
 init_db()
 start_ams(app)
 units.init_schema()
