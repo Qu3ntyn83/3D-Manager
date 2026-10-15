@@ -509,6 +509,7 @@ function slotHtml(p, t) {
     <div class="slot-body">${body}
       ${pct != null ? `<div class="slot-fill">${barI({ grams, total: tag?.full_weight_g, percent: pct })}<small>${pct} %</small></div>` : ""}
       ${tag ? `<div class="slot-key mono" title="${esc(tag.tag_key)}">◉ ${esc(shortKey(tag.tag_key))}</div>` : ""}
+      ${f && typeof studioLine === "function" ? studioLine(p, t) : ""}
       ${f ? `<button class="ghost slot-empty" data-empty="${esc(tag.tag_key)}" data-fid="${f.id}" title="Spule ist leer: Bestand −1 und Tag für die nächste Spule freigeben">Spule leer</button>` : ""}
     </div></div>`;
 }

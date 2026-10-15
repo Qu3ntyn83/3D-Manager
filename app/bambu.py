@@ -229,7 +229,15 @@ def run_sync() -> dict:
                 except Exception as e:  # noqa: BLE001
                     print("Druckaufträge:", e, flush=True)
                     task_res = {"error": str(e)}
-            return {"ok": True, "total": len(seen), "new": new, "auto_linked": linked, "gone": gone, "at": now, "tasks": task_res}
+            presets_n = None
+            if client.token or os.environ.get("BAMBU_MOCK_SLICER"):
+                try:
+                    import studio
+                    presets_n = studio.fetch_cloud(c, client)
+                except Exception as e:  # noqa: BLE001
+                    print("Studio-Profile:", e, flush=True)
+            return {"ok": True, "total": len(seen), "new": new, "auto_linked": linked, "gone": gone, "at": now, "tasks": task_res,
+                    "presets": presets_n}
     finally:
         _sync_lock.release()
 

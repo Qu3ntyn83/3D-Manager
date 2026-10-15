@@ -5,3 +5,4 @@ __pycache__/
 .env
 app/catalog/bambu.json
 docker-compose.override.yml
+app/catalog/studio_presets.json

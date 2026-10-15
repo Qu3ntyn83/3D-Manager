@@ -22,6 +22,7 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 - **Druckerstatus**: Fortschritt, Schicht, Restzeit, Fertig-Uhrzeit, Temperaturen (Düse/Bett/Kammer), aktives Filament, Lüfter, HMS-Fehler im Klartext (deutsch)
 - **Grammgenauer Verbrauch** je Druck aus den Bambu-Cloud-Druckaufträgen (Slicer-Gramm pro AMS-Slot) – korrigiert die AMS-Schätzung, abgebrochene Drucke anteilig; Slots ohne Tag per Klick einer Spule zuordnen
 - **Druckhistorie** mit Verbrauch und Kosten je Druck
+- **Bambu Studio zeigt das richtige Fremdfilament:** Liegt eine Spule mit umgesetztem Bambu-Tag im AMS, meldet der 3D Manager dem Drucker das passende Profil (eigenes Cloud-Profil oder Systemprofil wie „SUNLU PLA+“), die Inventarfarbe und die Düsentemperatur. Ob der Drucker die Werte übernimmt, wird geprüft und am Slot angezeigt (✓ / ⚠)
 
 **Spulen, Kosten & Planung**
 - **Einzelne Spulen** (S0001 …) statt nur Stückzahl: Status OVP/offen/leer, Restgewicht, Öffnungs- und Trocknungsdatum, Preis, Lagerort; RFID-Tag hängt an der konkreten Spule
