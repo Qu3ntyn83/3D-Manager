@@ -22,14 +22,14 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 FIL_FIELDS = ["brand", "material", "color_name", "official_name", "sku", "qty", "sealed", "spool",
               "refill", "sample", "last_check", "location", "notes", "colors", "pattern",
               "swatch_source", "image", "weight_g", "min_qty", "buy_url", "manufacturer_url",
-              "net_weight_g", "tare_g", "price", "profile", "ordered_at"]
+              "net_weight_g", "tare_g", "price", "profile", "ordered_at", "studio"]
 MAT_FIELDS = ["qty", "category", "description", "thickness", "location", "notes", "min_qty",
               "kind", "manufacturer", "manufacturer_url", "buy_url", "price", "ordered_at"]
 BOOL = {"sealed", "spool", "refill", "sample"}
 # per Massenbearbeitung änderbar (nicht: Farbe, Name, ID, Bestand, Bild)
 BULK_FIELDS = {
     "filaments": ["brand", "material", "location", "min_qty", "buy_url", "manufacturer_url", "net_weight_g", "tare_g", "price",
-                  "spool", "refill", "sample", "notes"],  # OVP ergibt sich aus den einzelnen Spulen
+                  "spool", "refill", "sample", "notes", "studio"],  # OVP ergibt sich aus den einzelnen Spulen
     "materials": ["category", "location", "min_qty", "manufacturer", "manufacturer_url", "buy_url", "price", "thickness", "notes"],
 }
 PROFILE_KEYS = {"nozzle_min", "nozzle_max", "bed_min", "bed_max", "dry_temp", "dry_hours", "open_days", "k_factor", "flow_ratio",
@@ -83,7 +83,7 @@ def init_db():
     for table, cols in (("materials", {"kind": "TEXT DEFAULT 'material'", "manufacturer": "TEXT", "manufacturer_url": "TEXT", "buy_url": "TEXT"}),
                         ("materials", {"price": "REAL", "ordered_at": "TEXT"}),
                         ("filaments", {"buy_url": "TEXT", "manufacturer_url": "TEXT", "net_weight_g": "INTEGER DEFAULT 1000",
-                                       "tare_g": "INTEGER", "price": "REAL", "profile": "TEXT", "ordered_at": "TEXT"})):
+                                       "tare_g": "INTEGER", "price": "REAL", "profile": "TEXT", "ordered_at": "TEXT", "studio": "TEXT"})):
         have = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
         for col, typ in cols.items():
             if col not in have:
@@ -108,7 +108,7 @@ def _clean(payload, fields):
             v = 1 if v in (True, 1, "1", "true", "ja") else 0
         elif f == "colors":
             v = json.dumps(v if isinstance(v, list) else [v])
-        elif f == "profile":
+        elif f in ("profile", "studio"):
             v = json.dumps(v) if isinstance(v, dict) else (v or None)
         elif f in ("price", "net_weight_g", "tare_g"):
             try:
@@ -133,6 +133,10 @@ def _row(r, kind):
             d["profile"] = json.loads(d.get("profile") or "{}")
         except (TypeError, ValueError):
             d["profile"] = {}
+        try:
+            d["studio"] = json.loads(d.get("studio") or "null")
+        except (TypeError, ValueError):
+            d["studio"] = None
     return d
 
 
@@ -198,6 +202,8 @@ def _crud(table, fields, kind):
         if qty is not None:
             with uconn() as uc:
                 units.reconcile_qty(uc, item_id, qty)
+        if table == "filaments" and set(c) & {"studio", "colors", "profile", "material", "brand"}:
+            studio.recheck_all()
         return get(item_id)
 
     def delete(item_id):
@@ -268,6 +274,8 @@ def _crud(table, fields, kind):
                     uc.execute(f"""UPDATE spool_units SET initial_g=?, remaining_g=? WHERE filament_id IN ({q})
                                    AND status='sealed' AND (remaining_g IS NULL OR remaining_g=initial_g)""",
                                [c["net_weight_g"], c["net_weight_g"], *ids])
+        if table == "filaments" and ("studio" in c or prof):
+            studio.recheck_all()
         return jsonify({"ok": True, "count": len(ids), "fields": list(c) + (["profile"] if prof else []) + (["notes"] if note else [])})
 
     base = f"/api/{table}"
@@ -466,6 +474,7 @@ import insights  # noqa: E402
 import tasks  # noqa: E402
 import backup  # noqa: E402
 import nfc  # noqa: E402
+import studio  # noqa: E402
 from bambu import ensure_catalog  # noqa: E402
 
 app.register_blueprint(bambu_bp)
@@ -475,11 +484,14 @@ app.register_blueprint(insights.bp)
 app.register_blueprint(tasks.bp)
 app.register_blueprint(backup.bp)
 app.register_blueprint(nfc.bp)
+app.register_blueprint(studio.bp)
 init_db()
 start_ams(app)
 units.init_schema()
 tasks.init_schema()
+studio.init_schema()
 ensure_catalog(app)
+studio.ensure_presets()
 backup.scheduler()
 start_scheduler(app)
 

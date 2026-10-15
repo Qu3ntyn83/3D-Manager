@@ -314,6 +314,13 @@
       <p class="muted small">Leere Felder = Richtwert der Materialfamilie (grau). Familien-Richtwerte unter ⋯ → Einstellungen.</p>
     </fieldset>
 
+    <fieldset id="studioBox">
+      <legend>Bambu Studio</legend>
+      <p class="muted small">Liegt die Spule mit zugeordnetem RFID-Tag im AMS, schickt der 3D Manager dem Drucker dieses Profil mit Farbe und Düsentemperatur – Bambu Studio zeigt den Slot dann als dieses Filament statt als das, was im Tag steht.</p>
+      <button type="button" class="pickbtn wide" id="studioPick"><span>Automatisch</span><i>🔍</i></button>
+      <p class="muted small" id="studioHint"></p>
+    </fieldset>
+
     <fieldset class="rfid" id="rfidBox">
       <legend>RFID-Tags (AMS &amp; Cloud)</legend>
       <div id="rfidList"></div>
@@ -461,6 +468,8 @@
         <label>Hersteller-Link<input data-bs="manufacturer_url" inputmode="url" autocomplete="off"></label>
         <label>Bezugsquelle (Shop-Link)<input data-bs="buy_url" inputmode="url" autocomplete="off"></label>
       </div>
+      <label>Bambu-Studio-Profil</label>
+      <button type="button" class="pickbtn wide" id="bulkStudio" data-val="null"><span>unverändert</span><i>🔍</i></button>
       <label>Notiz anhängen (wird an vorhandene Notizen angefügt)<input id="bulkNote" autocomplete="off"></label>
     </fieldset>
     <footer class="dlg-foot"><span class="muted small" id="bulkSummary"></span><span class="spacer"></span><button type="button" class="ghost" data-close>Abbrechen</button><button class="primary" id="bulkSave">Übernehmen</button></footer>
@@ -480,6 +489,10 @@
       <label>„Fast leer“ unter (g)<input name="low_stock_g" type="number" step="50" min="0"></label>
       <label>AMS-Feuchte-Warnung ab %<input name="ams_humidity_warn" type="number" min="0" max="100"></label>
     </div></fieldset>
+    <fieldset><legend>Bambu Studio</legend>
+      <label class="inline"><input type="checkbox" id="studioAuto"> Fremdfilament automatisch ans AMS melden, sobald eine Spule mit zugeordnetem Tag eingelegt wird</label>
+      <p class="muted small">Bambu Studio zeigt den Slot dann mit dem Profil, der Farbe und den Temperaturen der Inventar-Spule. Profile: eigene aus der Bambu-Cloud (beim Sync) und Systemprofile von Bambu Studio. <span id="studioCloudAt"></span> <button type="button" class="ghost mini" id="studioRefresh">Eigene Profile neu laden</button></p>
+    </fieldset>
     <fieldset><legend>Etiketten</legend><div class="form-grid">
       <label class="full">Adresse der App für QR-Codes<input name="public_url" placeholder="leer = aktuelle Adresse, z. B. https://3d.example.de"></label>
     </div></fieldset>

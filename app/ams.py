@@ -261,6 +261,11 @@ class PrinterConn:
                 changed |= self._merge(255, tid, tr)
         if changed:
             self.persist()
+            try:
+                import studio
+                studio.check(self)
+            except Exception as e:  # noqa: BLE001
+                print("Studio-Abgleich:", e, flush=True)
         # Nur Delta-Meldungen bekommen (z. B. Drucker war beim Verbinden kurz weg)? → Vollstatus anfordern
         if ("gcode_state" not in self.raw or not self.state) and time.time() - self._last_pushall > 30:
             self.pushall()
@@ -315,7 +320,8 @@ class PrinterConn:
                            info.get(aid, {}).get("humidity_raw") or info.get(aid, {}).get("humidity"), info.get(aid, {}).get("temp"), ts))
                 if key:
                     seen_keys.add(key)
-                    update_tag(c, key, tr, self.id, aid, tid, remain, ts)
+                    import studio
+                    update_tag(c, key, tr, self.id, aid, tid, remain, ts, ours=studio.is_ours(c, self.id, aid, tid, tr))
             # Tags, die dieser Drucker vorher hatte und jetzt nicht mehr: aus dem AMS genommen
             q = "UPDATE tags SET in_ams=0 WHERE printer_id=? AND in_ams=1"
             if seen_keys:
@@ -323,12 +329,15 @@ class PrinterConn:
             c.execute(q, (self.id, *seen_keys))
 
 
-def update_tag(c, key, tr, pid, aid, tid, remain, ts):
+def update_tag(c, key, tr, pid, aid, tid, remain, ts, ours=False):
     old = c.execute("SELECT * FROM tags WHERE tag_key=?", (key,)).fetchone()
     tag_w = _int(tr.get("tray_weight"), 0) or None
     vals = dict(tray_uuid=tr.get("tray_uuid"), tag_uid=tr.get("tag_uid"), tag_type=tr.get("tray_type"),
                 tag_idx=tr.get("tray_info_idx"), tag_color=(tr.get("tray_color") or "").upper(), tag_weight=tag_w,
                 last_seen=ts, printer_id=pid, ams_id=aid, tray_id=tid, in_ams=1)
+    if ours and old:  # Drucker meldet die vom 3D Manager gesetzten Werte → Tag-Angaben behalten
+        for k in ("tag_type", "tag_idx", "tag_color"):
+            vals.pop(k)
     if remain is not None and remain >= 0:
         vals["remain_pct"] = remain
     if not old and tr.get("tag_uid"):
@@ -576,10 +585,14 @@ def live():
                 d["cols"] = json.loads(d["cols"] or "[]")
                 d["claims"] = catalog_name(d["tray_info_idx"], d["color"])
                 d["tag"] = None
+                import studio
+                d["studio"] = studio.slot_info(c, p["id"], d["ams_id"], d["tray_id"])
                 if d["tag_key"]:
                     tg = c.execute("SELECT * FROM tags WHERE tag_key=?", (d["tag_key"],)).fetchone()
                     if tg:
                         d["tag"] = tag_out(tg)
+                        if tg["tag_idx"]:
+                            d["claims"] = catalog_name(tg["tag_idx"], tg["tag_color"])
                         f = fil.get(tg["filament_ref"])
                         if f:
                             f = dict(f)

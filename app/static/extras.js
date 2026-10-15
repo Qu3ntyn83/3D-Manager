@@ -72,6 +72,8 @@ function onOpenFil(f) {
   $("#unitLabels").hidden = !f;
   renderUnits(f);
   renderProfile(f);
+  delete $("#studioPick").dataset.touched;
+  renderStudioBox(f);
 }
 function renderUnits(f) {
   if (!f) { $("#unitList").innerHTML = ""; return; }
@@ -161,6 +163,7 @@ function beforeSaveFil(body) {
   const prof = {};
   $$("[data-prof]").forEach(inp => { if (inp.value !== "") prof[inp.dataset.prof] = inp.type === "number" ? +inp.value : inp.value; });
   body.profile = prof;
+  if ($("#studioPick").dataset.touched) body.studio = JSON.parse($("#studioPick").dataset.val || "null");
 }
 
 /* ---------- Druckhistorie: Verbrauchs-Chips ---------- */
@@ -302,6 +305,11 @@ async function openSettings() {
   state.profiles = await api("/api/profiles");
   renderProfTable();
   renderBackups(await api("/api/backups"));
+  studioPresets(true).then(st => {
+    $("#studioAuto").checked = st.auto;
+    const own = st.presets.filter(p => p.source === "eigenes").length;
+    $("#studioCloudAt").textContent = st.cloud_at ? `${own} eigene Profile, geladen ${fmtTime(st.cloud_at)}.` : "Eigene Profile noch nicht geladen.";
+  }).catch(() => {});
   $(".menu").open = false;
   $("#setDlg").showModal();
 }
@@ -588,7 +596,11 @@ $("#bulkEdit").onclick = () => {
     const v = commonVal(list, x => !!x[sel.dataset.bb]);
     sel.value = ""; sel.options[0].textContent = v === undefined ? "unverändert" : `unverändert: ${v ? "ja" : "nein"}`; sel.title = v === undefined ? "gemischt" : "";
   });
-  $("#bulkNote").value = ""; bulkSummary();
+  $("#bulkNote").value = "";
+  const bs = $("#bulkStudio"); delete bs.dataset.touched; bs.dataset.val = "null";
+  const cs = commonVal(list, x => x.studio ? x.studio.filament_id : null);
+  bs.querySelector("span").textContent = cs === undefined ? "unverändert (verschieden)" : cs ? `unverändert: ${list[0].studio.name}` : "unverändert (automatisch)";
+  bulkSummary();
   $("#bulkDlg").showModal();
 };
 function bulkPayload() {
@@ -603,10 +615,11 @@ function bulkPayload() {
   $$("[data-bs]", f).forEach(i => { const v = val(i, BULK_NUM.has(i.dataset.bs)); if (v !== undefined) { if (Number.isNaN(v)) bad = i; else set[i.dataset.bs] = v; } });
   $$("[data-bp]", f).forEach(i => { const v = val(i, i.dataset.bp !== "notes"); if (v !== undefined) { if (Number.isNaN(v)) bad = i; else profile[i.dataset.bp] = v; } });
   $$("[data-bb]", f).forEach(s => { if (s.value !== "") set[s.dataset.bb] = s.value === "1"; });
+  if ($("#bulkStudio").dataset.touched) set.studio = JSON.parse($("#bulkStudio").dataset.val || "null");
   return { set, profile, note: $("#bulkNote").value.trim(), bad };
 }
 const BULK_LABEL = { brand: "Marke", material: "Material", location: "Lagerort", min_qty: "Mindestbestand", price: "Preis", net_weight_g: "Netto",
-  tare_g: "Tara", manufacturer_url: "Hersteller-Link", buy_url: "Shop-Link", sealed: "OVP", spool: "Spule", refill: "Refill", sample: "Muster" };
+  tare_g: "Tara", studio: "Studio-Profil", manufacturer_url: "Hersteller-Link", buy_url: "Shop-Link", sealed: "OVP", spool: "Spule", refill: "Refill", sample: "Muster" };
 function bulkSummary() {
   const { set, profile, note } = bulkPayload();
   const parts = [...Object.keys(set).map(k => BULK_LABEL[k] || k), ...(Object.keys(profile).length ? ["Profil (" + Object.keys(profile).length + ")"] : []), ...(note ? ["Notiz"] : [])];
@@ -628,3 +641,90 @@ $("#bulkForm").addEventListener("submit", async e => {
     toast(`${r.count} Filament${r.count > 1 ? "e" : ""} geändert`);
   } catch (err) { toast("Fehler: " + err.message); }
 });
+
+/* ---------- Bambu Studio: Profil des Fremdfilaments im AMS-Slot ---------- */
+const STUDIO_ST = {
+  ok: ["ok", "✓", "Bambu Studio zeigt dieses Profil, Farbe und Temperatur für den Slot"],
+  sent: ["run", "…", "An den Drucker gesendet – warte auf Rückmeldung"],
+  rejected: ["bad", "⚠", "Der Drucker meldet weiter die Werte des Bambu-Tags. Die Firmware übernimmt für Slots mit Bambu-Tag offenbar keine Änderung."],
+  pending: ["", "○", "Noch nicht gesendet"],
+  off: ["", "○", "Automatisches Senden ist ausgeschaltet"],
+};
+function studioLine(p, t) {
+  const s = t.studio; if (!s) return "";
+  const [cls, ico, tip] = STUDIO_ST[s.status] || STUDIO_ST.pending;
+  return `<div class="studio-line ${cls}" title="${esc(tip)}">
+    <span>${ico} Studio: <b>${esc(s.preset || s.filament_id || "?")}</b></span>
+    ${s.status !== "ok" ? `<button type="button" class="ghost mini" data-studio-push="${p.id}:${t.ams_id}:${t.tray_id}" title="Werte jetzt an den Drucker senden">↻</button>` : ""}
+  </div>`;
+}
+$("#amsLive").addEventListener("click", async e => {
+  const b = e.target.closest("[data-studio-push]"); if (!b) return;
+  const [pid, aid, tid] = b.dataset.studioPush.split(":").map(Number);
+  b.disabled = true;
+  try {
+    const res = await fetch("/api/studio/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ printer_id: pid, ams_id: aid, tray_id: tid }) });
+    const r = await res.json().catch(() => ({}));
+    toast(res.ok ? "An den Drucker gesendet – Ergebnis in ca. 20 s" : "Fehler: " + (r.error || res.status));
+    setTimeout(() => loadAms().catch(() => {}), 4000); setTimeout(() => loadAms().catch(() => {}), 24000);
+  } finally { b.disabled = false; }
+});
+
+/* Profilauswahl (Filament-Dialog und Massenbearbeitung) */
+async function studioPresets(force) {
+  if (!state.studio || force) state.studio = await api("/api/studio/presets");
+  return state.studio;
+}
+async function pickStudioPreset(title, current, onPick) {
+  const { presets } = await studioPresets();
+  openPicker({
+    title, selected: current ?? null,
+    clearLabel: "Automatisch (passend zu Marke und Material)",
+    items: presets.map(p => ({
+      value: p.filament_id, label: p.name, colors: ["#7a7a7aFF"],
+      html: `${esc(p.name)}`,
+      sub: `${p.vendor || ""}${p.type ? " · " + p.type : ""}${p.nozzle_min ? ` · ${p.nozzle_min}–${p.nozzle_max} °C` : ""} · ${p.filament_id}`,
+      badge: p.source === "eigenes" ? "eigenes" : "", badgeClass: "ams",
+      _hay: norm(`${p.name} ${p.vendor} ${p.type} ${p.filament_id}`),
+    })),
+    onPick: v => {
+      const p = presets.find(x => x.filament_id === v);
+      onPick(v ? { filament_id: v, name: p ? p.name : v } : null);
+    },
+  });
+}
+async function renderStudioBox(f) {
+  const box = $("#studioBox"); if (!box) return;
+  const btn = $("#studioPick"), hint = $("#studioHint");
+  btn.dataset.val = JSON.stringify(f && f.studio || null);
+  btn.querySelector("span").textContent = "…";
+  if (!f || !f.id) { btn.querySelector("span").textContent = "Automatisch (nach dem Speichern)"; hint.textContent = ""; return; }
+  try {
+    const d = await api(`/api/studio/filament/${f.id}`);
+    btn.querySelector("span").innerHTML = `${esc(d.preset)} <small>${d.auto ? "automatisch" : "gewählt"} · ${esc(d.tray_info_idx)}</small>`;
+    hint.textContent = `Ins AMS gesendet werden: ${d.preset}, Farbe #${d.tray_color.slice(0, 6)}, Düse ${d.nozzle_temp_min}–${d.nozzle_temp_max} °C, Typ ${d.tray_type}.`;
+  } catch { btn.querySelector("span").textContent = "Automatisch"; }
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("#studioPick, #bulkStudio"); if (!b) return;
+  e.preventDefault();
+  const cur = JSON.parse(b.dataset.val || "null");
+  pickStudioPreset("Bambu-Studio-Profil wählen", cur ? cur.filament_id : null, v => {
+    b.dataset.val = JSON.stringify(v); b.dataset.touched = "1";
+    b.querySelector("span").innerHTML = v ? `${esc(v.name)} <small>gewählt · ${esc(v.filament_id)}</small>` : "Automatisch";
+    if (b.id === "bulkStudio") bulkSummary();
+  });
+});
+
+$("#studioAuto").addEventListener("change", async e => {
+  await api("/api/studio/auto", { method: "PUT", body: JSON.stringify({ on: e.target.checked }) });
+  toast(e.target.checked ? "Fremdfilament wird automatisch ans AMS gemeldet" : "Automatisches Melden aus");
+});
+$("#studioRefresh").onclick = async () => {
+  const res = await fetch("/api/studio/presets/refresh", { method: "POST" });
+  const r = await res.json().catch(() => ({}));
+  if (!res.ok) return toast("Fehler: " + (r.error || res.status));
+  const st = await studioPresets(true);
+  $("#studioCloudAt").textContent = `${st.presets.filter(p => p.source === "eigenes").length} eigene Profile, geladen ${fmtTime(st.cloud_at)}.`;
+  toast(`${r.count} Profile aus der Bambu-Cloud geladen`);
+};

@@ -169,3 +169,51 @@ def test_bulk_edit_filaments(client):
     g = client.get(f"/api/filaments/{a['id']}").json
     assert g["color_name"] == "A" and g["qty"] == 1 and g["location"] is None
     assert client.post("/api/filaments/bulk", json={"ids": []}).status_code == 400
+
+
+def test_studio_sync_to_ams(client, monkeypatch):
+    """Tag eines Bambu-Filaments auf Sunlu-Spule: Drucker bekommt SUNLU-Profil + Inventarfarbe; Ablehnung wird erkannt."""
+    import json as _j
+    import threading
+    import studio
+    from bambu import conn
+    monkeypatch.setattr(studio, "static_presets", lambda: [
+        {"filament_id": "GFSNL03", "name": "SUNLU PLA+", "vendor": "SUNLU", "type": "PLA", "nozzle_min": 190, "nozzle_max": 240},
+        {"filament_id": "GFL99", "name": "Generic PLA", "vendor": "Generic", "type": "PLA", "nozzle_min": 190, "nozzle_max": 240},
+        {"filament_id": "GFA00", "name": "Bambu PLA Basic", "vendor": "Bambu Lab", "type": "PLA", "nozzle_min": 190, "nozzle_max": 240}])
+    monkeypatch.setattr(studio.threading, "Timer", lambda *a, **k: type("T", (), {"start": lambda self: None})())
+    f = client.post("/api/filaments", json={"brand": "Sunlu", "material": "PLA +", "color_name": "Pink", "qty": 1, "colors": ["#FF66AAFF"]}).json
+    with conn() as c:
+        c.execute("INSERT INTO tags (tag_key, tray_uuid, tag_uid, filament_ref) VALUES ('ST1','ST1','11223344AABBCCDD',?)", (f["id"],))
+    sent = []
+
+    class Pc:
+        id, serial, cfg, connected = 77, "0938XX", {"model": None}, True
+        _lock = threading.Lock()
+        state = {(0, 2): {"tray_uuid": "ST1", "tag_uid": "11223344AABBCCDD", "tray_info_idx": "GFA00", "tray_color": "000000FF", "state": 11}}
+        client = type("C", (), {"publish": lambda self, t, p: sent.append(_j.loads(p))})()
+        def pushall(self): pass
+    pc = Pc()
+    studio.check(pc)
+    assert len(sent) == 1
+    cmd = sent[0]["print"]
+    assert cmd["command"] == "ams_filament_setting" and cmd["tray_info_idx"] == "GFSNL03" and cmd["tray_color"] == "FF66AAFF"
+    assert cmd["ams_id"] == 0 and cmd["slot_id"] == 2 and cmd["tray_type"] == "PLA"
+    studio.check(pc)            # Drucker hat noch nicht geantwortet → nicht erneut senden
+    assert len(sent) == 1
+    pc.state[(0, 2)].update(tray_info_idx="GFSNL03", tray_color="FF66AAFF")   # Drucker übernimmt
+    studio.check(pc)
+    with conn() as c:
+        assert studio.slot_info(c, 77, 0, 2)["status"] == "ok"
+        assert studio.is_ours(c, 77, 0, 2, pc.state[(0, 2)])
+    # Profil wechseln → neue Werte; Drucker ignoriert → nach Frist „rejected“, keine Endlosschleife
+    client.put(f"/api/filaments/{f['id']}", json={"studio": {"filament_id": "GFL99", "name": "Generic PLA"}})
+    studio.check(pc)
+    assert sent[-1]["print"]["tray_info_idx"] == "GFL99" and len(sent) == 2
+    with conn() as c:
+        c.execute("UPDATE studio_slots SET sent_at = sent_at - 60 WHERE printer_id=77")
+    studio.check(pc)
+    with conn() as c:
+        assert studio.slot_info(c, 77, 0, 2)["status"] == "rejected"
+    studio.check(pc)
+    assert len(sent) == 2

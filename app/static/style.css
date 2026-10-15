@@ -787,3 +787,16 @@ td .rflag { font-size: 10.5px; padding: 2px 7px 2px 5px; }
 #cloudSyncBtn svg { display: block; }
 #cloudSyncBtn.spin svg { animation: cspin .9s linear infinite; }
 @keyframes cspin { to { transform: rotate(360deg); } }
+
+/* ---------- Bambu Studio ---------- */
+.studio-line { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 6px; padding: 4px 8px;
+  border-radius: 8px; font-size: 12px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); }
+.studio-line b { color: var(--text); font-weight: 600; }
+.studio-line.ok { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.studio-line.ok span { color: var(--ok); }
+.studio-line.bad { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.studio-line.bad span { color: var(--danger); }
+.studio-line.run span { color: var(--accent); }
+.studio-line button.mini { padding: 2px 8px; min-height: 0; font-size: 12px; }
+#studioBox .pickbtn small { color: var(--muted); margin-left: 6px; }
+#studioHint { margin-top: 6px; }
