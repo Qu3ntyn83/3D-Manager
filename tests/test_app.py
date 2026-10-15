@@ -217,3 +217,25 @@ def test_studio_sync_to_ams(client, monkeypatch):
         assert studio.slot_info(c, 77, 0, 2)["status"] == "rejected"
     studio.check(pc)
     assert len(sent) == 2
+
+
+def test_stats_full(client):
+    for q in ("range=7d", "range=30d", "range=90d", "range=365d", "range=year", "range=all", "from=2026-01-01&to=2026-03-31"):
+        d = client.get(f"/api/stats/full?{q}").json
+        assert d["bucket"] in ("day", "week", "month") and d["series"]
+        assert {"kpi", "prints", "printers", "heatmap", "slots", "stock", "idle", "by_material", "by_brand"} <= set(d)
+        assert len(d["heatmap"]["hours"]) == 7 and all(len(r) == 24 for r in d["heatmap"]["hours"])
+    d = client.get("/api/stats/full?range=30d&idle_days=0").json
+    assert d["idle_total"] >= 1 and d["stock"]
+
+
+def test_js_globals_unique():
+    """Die Skripte teilen sich einen globalen Namensraum – doppelte Namen brechen ein ganzes Skript."""
+    import re
+    from pathlib import Path
+    seen = {}
+    for name in ("app.js", "extras.js", "stats.js"):
+        src = (Path(__file__).resolve().parents[1] / "app" / "static" / name).read_text(encoding="utf-8")
+        for m in re.finditer(r"^(?:const|let|function|async function|class) ([A-Za-z_$][\w$]*)", src, re.M):
+            assert m.group(1) not in seen, f"{m.group(1)} doppelt in {seen.get(m.group(1))} und {name}"
+            seen[m.group(1)] = name

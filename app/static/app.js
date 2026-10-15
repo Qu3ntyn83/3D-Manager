@@ -752,6 +752,7 @@ function setTab(t) {
   $$(".tab").forEach(s => s.hidden = s.id !== "tab-" + t);
   if (t === "bambu" && state.fil.length) { loadBambu().catch(() => {}); loadAms().catch(() => {}); }
   if (t === "overview" && typeof loadOverview === "function") loadOverview().catch(() => {});
+  if (t === "stats" && typeof loadStats === "function") loadStats().catch(e => toast("Statistik: " + e.message));
   if (t === "printer") { loadStatus().catch(() => {}); loadJobs().catch(() => {}); if (!state.live.length) loadAms().catch(() => {}); }
 }
 $$(".tabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));

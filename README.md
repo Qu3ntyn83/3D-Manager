@@ -29,6 +29,7 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 - **Wiegen** mit Tara (Leerspule wird je Sorte gemerkt)
 - **Kosten**: Preis je Spule/kg, Kosten je Druck (Material + Strom), Lagerwert
 - **Übersicht**: Einkaufsliste (Mindestbestand/fast leer, gruppiert nach Shop, „bestellt“-Markierung), Trocknungs-Hinweise (offene Liegezeit je Material, AMS-Feuchte), Verbrauch 12 Monate, nach Material, Top-Farben, „Reicht noch …“-Prognose
+- **Statistik** (eigener Reiter, Zeitraum frei wählbar, Vergleich zum Vorzeitraum): Verbrauch, Kosten (Material/Strom/Ausschuss), Erfolgsquote, Ø je Druck, teuerste/längste/abgebrochene Drucke, Kosten nach Material und Marke, Auslastung je Drucker, Heatmap Wochentag × Uhrzeit, Verbrauch je AMS-Slot, Lagerwert je Marke, Ladenhüter
 - **Materialprofile**: Düsen-/Betttemperatur, Trocknung, max. offene Tage je Familie (PLA, PETG, ABS …) mit Überschreibung pro Sorte
 - **QR-Etiketten** (A4-Bögen 3×8 / 2×7, Etikettenrollen 62×29 / 50×30) und **Scanner** im Browser – Scan öffnet die Spule, Inventur per Scan
 - **Automatische Backups** (täglich, Aufbewahrung einstellbar, Download in den Einstellungen)
@@ -43,6 +44,7 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 | ![Drucker](docs/screenshots/drucker.png) | ![AMS](docs/screenshots/ams.png) | ![Tags](docs/screenshots/rfid-tags.png) | ![Mobil](docs/screenshots/mobil-inventur.png) |
 
 ![Übersicht](docs/screenshots/uebersicht.png)
+![Statistik](docs/screenshots/statistik.png)
 
 ## Installation
 
@@ -147,7 +149,8 @@ Handy-Browser können Bambu-Tags (MIFARE Classic) nicht lesen. Dafür gibt es di
 | POST | `/api/units/<id>/weigh` | wiegen `{"gross_g": 812, "tare_g": 250}` |
 | POST | `/api/units/<id>/open`, `/empty`, `/dry` | Spule öffnen / leer / getrocknet |
 | POST | `/api/jobs/<id>/assign` | Slicer-Gramm eines Slots ohne Tag zuordnen |
-| GET | `/api/stats`, `/api/shopping`, `/api/drying` | Statistik, Einkaufsliste, Trocknung |
+| GET | `/api/stats`, `/api/shopping`, `/api/drying` | Kurzstatistik, Einkaufsliste, Trocknung |
+| GET | `/api/stats/full?range=90d` bzw. `?from=…&to=…` | Erweiterte Statistik |
 | GET/PUT | `/api/settings`, `/api/profiles` | Einstellungen, Materialprofile |
 | GET/POST | `/api/backups` | Backups auflisten / jetzt sichern |
 | GET | `/api/export`, `/api/export.csv?kind=filaments` | Backup / CSV |
