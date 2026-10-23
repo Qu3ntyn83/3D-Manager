@@ -9,9 +9,12 @@ Diese Dateien stammen aus fremden Projekten und stehen unter deren eigener Lizen
 | `app/catalog/community.json` | Filament-Farbdatenbank von [color-tools / color-match-tools](https://github.com/dterracino/color_tools) | MIT |
 | `app/hms/hms_de.json.gz`, `app/hms/hms_en.json.gz` | HMS-/Fehlertexte aus [ha-bambulab](https://github.com/greghesp/ha-bambulab) | MIT (siehe `app/hms/LICENSE-ha-bambulab`) |
 | `app/static/vendor/qrcode.js` | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) von Kazuhiko Arase | MIT |
+| `app/static/vendor/three/` (three.min.js, OrbitControls, STLLoader, 3MFLoader, fflate) | [three.js](https://github.com/mrdoob/three.js) r147 inkl. [fflate](https://github.com/101arrowz/fflate) | MIT (siehe `LICENSE-three`) |
 | `app/static/vendor/jsQR.js` | [jsQR](https://github.com/cozmo/jsQR) | Apache-2.0 (siehe `app/static/vendor/LICENSE-jsQR`) |
 
 Schlüsselableitung und Blockformat der Bambu-RFID-Tags (`android/…/BambuTag.java`) folgen dem [RFID-Tag-Guide der Bambu Research Group](https://github.com/Bambu-Research-Group/RFID-Tag-Guide).
+
+Die MakerWorld-Anbindung (Sammlungen, Modell-Details, signierter 3MF-Download über `api.bambulab.com`) orientiert sich an [OpenBambuAPI](https://github.com/Doridian/OpenBambuAPI/blob/main/cloud-makerworld.md) und [Bambuddy](https://github.com/maziggy/bambuddy). MakerWorld-Inhalte unterliegen den Lizenzen der jeweiligen Designer.
 
 Die Kommunikation mit der Bambu-Cloud und dem Drucker (MQTT) orientiert sich an der Dokumentation und dem Code von [ha-bambulab](https://github.com/greghesp/ha-bambulab), [ha-bambu-filaments](https://github.com/Timmes123/ha-bambu-filaments) und [OpenBambuAPI](https://github.com/Doridian/OpenBambuAPI).
 

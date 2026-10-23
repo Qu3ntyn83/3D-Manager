@@ -13,6 +13,9 @@ services:
       - SEED=0
       # Backups landen standardmäßig in ./data/backups – oder z. B. auf einem NAS-Share:
       # - BACKUP_DIR=/backups
+      # Druckdateien der Bibliothek woanders ablegen (z. B. NAS), max. Größe je Datei:
+      # - LIBRARY_DIR=/library
+      # - LIBRARY_MAX_MB=500
       # Demo ohne Bambu-Account: Beispiel-Spulen der Cloud-Bibliothek laden
       # - BAMBU_MOCK=/app/mock_spools.json
     # Falls der Container keine Namen auflösen kann ("Could not resolve host"):
@@ -22,3 +25,4 @@ services:
     volumes:
       - ./data:/data
       # - /mnt/nas/3d-manager-backups:/backups
+      # - /mnt/nas/3d-druckdateien:/library

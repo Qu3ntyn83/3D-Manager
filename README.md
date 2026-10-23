@@ -34,6 +34,13 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 - **QR-Etiketten** (A4-Bögen 3×8 / 2×7, Etikettenrollen 62×29 / 50×30) und **Scanner** im Browser – Scan öffnet die Spule, Inventur per Scan
 - **Automatische Backups** (täglich, Aufbewahrung einstellbar, Download in den Einstellungen)
 
+**Bibliothek für Druckdateien**
+- **3MF und STL** ablegen (hochladen oder per Ziehen & Ablegen), mehrere Dateien je Modell
+- **Vorschaubilder** automatisch: aus der 3MF (Bambu-Plattenbild) oder selbst gerendert; Maße, Volumen, Platten, Druckzeit/Gewicht (gesliced) und Filamente
+- **3D-Vorschau** im Browser (drehen, zoomen), **„In Bambu Studio öffnen“**, Download
+- **Tags** (Filter, Umbenennen, Massenzuweisung) und **eigene Sammlungen**
+- **MakerWorld-Sync**: deine Sammlungen (auch private) werden mit dem Bambu-Konto gespiegelt – Titel, Designer, Beschreibung, Lizenz, Tags, Titelbild und die **3MF-Datei** (bevorzugt das Druckprofil für deinen Drucker, anderes Profil wählbar). Automatisch alle 6 h, gedrosselt; einzelne Modelle oder öffentliche Sammlungen per Link übernehmen
+
 **Bedienung**
 - Dark Mode (Standard), Hell, System
 - Handy: Navigation unten, Karten statt Tabellen, große Touch-Ziele, Dialoge als Sheet
@@ -45,6 +52,7 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 
 ![Übersicht](docs/screenshots/uebersicht.png)
 ![Statistik](docs/screenshots/statistik.png)
+![Bibliothek](docs/screenshots/bibliothek.png)
 
 ## Installation
 
@@ -60,6 +68,7 @@ docker compose up -d     # oder selbst bauen: docker compose up -d --build
 Danach erreichbar unter `http://<docker-host>:8095`.
 
 - Daten liegen in `./data` (`inventar.db` + `uploads/` für Fotos).
+- **Bibliothek**: Druckdateien liegen in `./data/library` (eigener Ort per `LIBRARY_DIR`, z. B. NAS). Sie sind wegen der Größe **nicht** im täglichen Backup – den Ordner separat sichern. Max. Dateigröße `LIBRARY_MAX_MB` (Standard 500).
 - **Backups**: täglich um 3 Uhr nach `./data/backups` (14 Tage, mind. 3 Stück) – Zeit/Aufbewahrung unter ⋯ → Einstellungen. Ziel per `BACKUP_DIR` z. B. auf ein NAS legen. Wiederherstellen: Container stoppen, Archiv in `./data` entpacken, starten.
 - Der Bambu-Farbkatalog (AGPL) ist nicht im Repository; er wird beim Build bzw. beim ersten Start von GitHub geladen.
 - **Kamera-Scanner** braucht HTTPS (Reverse Proxy) – unter `http://` geht nur die Eingabe des Codes von Hand. Für die QR-Etiketten unter Einstellungen die öffentliche Adresse eintragen.
@@ -153,6 +162,11 @@ Handy-Browser können Bambu-Tags (MIFARE Classic) nicht lesen. Dafür gibt es di
 | GET | `/api/stats/full?range=90d` bzw. `?from=…&to=…` | Erweiterte Statistik |
 | GET/PUT | `/api/settings`, `/api/profiles` | Einstellungen, Materialprofile |
 | GET/POST | `/api/backups` | Backups auflisten / jetzt sichern |
+| GET/POST | `/api/library/models` | Bibliothek: Modelle suchen (`q`, `tag`, `collection`, `source`) / hochladen (multipart `files`) |
+| GET/PUT/DELETE | `/api/library/models/<id>` | Modell mit Dateien, Tags, Sammlungen |
+| GET | `/api/library/files/<id>/<name>` | Datei herunterladen |
+| GET | `/api/library/tags`, `/api/library/collections` | Tags, Sammlungen |
+| POST | `/api/makerworld/sync`, `/api/makerworld/import` | MakerWorld synchronisieren / Link übernehmen |
 | GET | `/api/export`, `/api/export.csv?kind=filaments` | Backup / CSV |
 
 Damit lassen sich z. B. in Home Assistant per `rest`-Sensor Bestand, AMS-Belegung und Druckerstatus anzeigen.
@@ -172,6 +186,9 @@ app/
   units.py            einzelne Spulen, Verbrauchsprotokoll
   insights.py         Einstellungen, Kosten, Profile, Einkaufsliste, Statistik
   backup.py           automatische Backups
+  library.py          Bibliothek: Modelle, Dateien, Tags, Sammlungen
+  meshthumb.py        STL/3MF auswerten, Vorschaubilder rendern
+  makerworld.py       MakerWorld-Sammlungen synchronisieren, 3MF laden
   catalog_fetch.py    Bambu-Farbkatalog laden
   catalog/            Farbkataloge (Bambu, Community)
   hms/                HMS-Fehlertexte (de/en)

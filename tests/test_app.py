@@ -234,8 +234,100 @@ def test_js_globals_unique():
     import re
     from pathlib import Path
     seen = {}
-    for name in ("app.js", "extras.js", "stats.js"):
+    for name in ("app.js", "extras.js", "stats.js", "library.js"):
         src = (Path(__file__).resolve().parents[1] / "app" / "static" / name).read_text(encoding="utf-8")
         for m in re.finditer(r"^(?:const|let|function|async function|class) ([A-Za-z_$][\w$]*)", src, re.M):
             assert m.group(1) not in seen, f"{m.group(1)} doppelt in {seen.get(m.group(1))} und {name}"
             seen[m.group(1)] = name
+
+
+def _stl_bytes():
+    import struct
+    tris = [((0, 0, 0), (10, 0, 0), (0, 10, 0)), ((0, 0, 0), (0, 10, 0), (0, 0, 10)), ((0, 0, 0), (0, 0, 10), (10, 0, 0)), ((10, 0, 0), (0, 0, 10), (0, 10, 0))]
+    out = b"x" * 80 + struct.pack("<I", len(tris))
+    for t in tris:
+        out += struct.pack("<3f", 0, 0, 0) + b"".join(struct.pack("<3f", *v) for v in t) + b"\0\0"
+    return out
+
+
+def test_library_upload_tags_collections(client):
+    import io
+    import time
+    import library
+    r = client.post("/api/library/models", data={"files": [(io.BytesIO(_stl_bytes()), "Tetraeder.stl")], "tags": "Test, #Deko"},
+                    content_type="multipart/form-data")
+    assert r.status_code == 201
+    mid = r.json["ids"][0]
+    fid = client.get(f"/api/library/models/{mid}").json["file_list"][0]["id"]
+    library.analyze_now(fid)
+    m = client.get(f"/api/library/models/{mid}").json
+    f = m["file_list"][0]
+    assert m["title"] == "Tetraeder" and m["tags"] == ["deko", "test"] and f["kind"] == "stl"
+    assert f["meta"]["triangles"] == 4 and f["meta"]["size_mm"] == [10.0, 10.0, 10.0] and f["thumb"]
+    assert client.get(f["thumb"]).status_code == 200
+    d = client.get(f["url"])
+    assert d.status_code == 200 and d.data[:5] == b"xxxxx" and "Tetraeder.stl" in d.headers["Content-Disposition"]
+    # falsches Format, Pfad im Dateinamen
+    bad = client.post("/api/library/models", data={"files": [(io.BytesIO(b"x"), "evil.exe")]}, content_type="multipart/form-data")
+    assert bad.status_code == 400
+    r2 = client.post(f"/api/library/models/{mid}/files", data={"files": [(io.BytesIO(_stl_bytes() + b""), "../../x.stl")]}, content_type="multipart/form-data")
+    assert r2.status_code == 201  # gleiche Datei → kein Duplikat
+    assert len(client.get(f"/api/library/models/{mid}").json["file_list"]) == 1
+    # Tags, Sammlung, Suche
+    k = client.post("/api/library/collections", json={"name": "Werkstatt"}).json["id"]
+    client.put(f"/api/library/models/{mid}", json={"tags": ["halter", "Deko"], "collections": [k], "notes": "PETG"})
+    assert client.get("/api/library/models?tag=halter").json[0]["id"] == mid
+    assert client.get(f"/api/library/models?collection={k}").json[0]["collections"][0]["name"] == "Werkstatt"
+    assert client.get("/api/library/models?q=tetra").json and not client.get("/api/library/models?q=gibtsnicht").json
+    client.post("/api/library/tags/rename", json={"old": "halter", "new": "wandhalter"})
+    assert "wandhalter" in client.get(f"/api/library/models/{mid}").json["tags"]
+    assert client.delete(f"/api/library/models/{mid}").status_code == 204
+    assert not library.file_path(fid, "stl").exists()
+
+
+def test_makerworld_sync_mocked(client, monkeypatch):
+    """Sammlungen → Modelle mit Tags → 3MF-Download (API-Antworten simuliert)."""
+    import io
+    import zipfile
+    import makerworld
+    from bambu import conn, set_setting
+    with conn() as c:
+        set_setting(c, "bambu_token", "x.eyJ1c2VybmFtZSI6InVfMTIzNDU2Nzg5In0.y")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("3D/3dmodel.model", '<model><metadata name="Title">Halter</metadata></model>')
+    calls = []
+
+    def fake_get(cl, path, auth=True):
+        calls.append(path)
+        if path.startswith("/v1/design-service/favoriteslist/123456789"):
+            return {"total": 1, "hits": [{"id": 900, "title": "Werkstatt", "status": 2}]}
+        if path == "/v1/design-service/favorites/900":
+            return {"id": 900, "title": "Werkstatt", "description": "Halter", "designs": [{"id": 4242, "title": "Wandhalter", "modelId": "USabc",
+                                                                                         "designCreator": {"name": "maker"}}]}
+        if path == "/v1/design-service/design/4242":
+            return {"id": 4242, "title": "Wandhalter", "summary": "<p>Ein <b>Halter</b></p>", "tags": ["Halter", "Wand"], "license": "BY",
+                    "modelId": "USabc", "defaultInstanceId": 1, "instances": [{"id": 1, "profileId": 777, "title": "0.2mm", "isDefault": True}]}
+        if path.startswith("/v1/iot-service/api/user/profile/777?model_id=USabc"):
+            return {"url": "https://makerworld.bblmw.com/x/Wandhalter.3mf?exp=1&key=k", "name": "Wandhalter.3mf"}
+        raise makerworld.MWError("unerwartet " + path)
+
+    monkeypatch.setattr(makerworld, "api_get", fake_get)
+    monkeypatch.setattr(makerworld, "fetch_bytes", lambda url, limit=0: buf.getvalue())
+    monkeypatch.setattr(makerworld, "save_cover", lambda mid, url: None)
+    monkeypatch.setattr(makerworld, "DELAY_API", 0)
+    monkeypatch.setattr(makerworld, "DELAY_DL", 0)
+    r = makerworld.run_sync()
+    assert r["ok"], r
+    assert r["collections"] == 1 and r["models"] == 1 and r["downloaded"] == 1
+    m = [x for x in client.get("/api/library/models?source=makerworld").json if x["title"] == "Wandhalter"][0]
+    assert {"halter", "wand"} <= set(m["tags"]) and m["files"] == 1 and m["mw_download"] == "done"
+    assert m["collections"][0]["name"] == "Werkstatt"
+    full = client.get(f"/api/library/models/{m['id']}").json
+    assert full["description"] == "Ein Halter" and full["file_list"][0]["name"] == "Wandhalter.3mf"
+    # zweiter Lauf: nichts doppelt, kein erneuter Download
+    r = makerworld.run_sync()
+    assert r["ok"] and r["downloaded"] == 0
+    assert len([x for x in client.get("/api/library/models?source=makerworld").json if x["title"] == "Wandhalter"]) == 1
+    assert makerworld.parse_ref("https://makerworld.com/de/collections/5565530-desk") == ("collection", 5565530)
+    assert makerworld.parse_ref("https://makerworld.com/en/models/1769930-x#profileId-1") == ("design", 1769930)

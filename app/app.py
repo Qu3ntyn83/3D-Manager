@@ -17,7 +17,8 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 ALLOWED_IMG = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+# Obergrenze für Uploads: groß genug für Druckdateien der Bibliothek; Fotos prüfen ihre Größe selbst
+app.config["MAX_CONTENT_LENGTH"] = (int(os.environ.get("LIBRARY_MAX_MB", "500")) + 20) * 1024 * 1024
 
 FIL_FIELDS = ["brand", "material", "color_name", "official_name", "sku", "qty", "sealed", "spool",
               "refill", "sample", "last_check", "location", "notes", "colors", "pattern",
@@ -344,6 +345,8 @@ def upload_image(item_id):
     ext = Path(f.filename).suffix.lower()
     if ext not in ALLOWED_IMG:
         abort(415)
+    if request.content_length and request.content_length > 12 * 1024 * 1024:
+        abort(413)
     old = db().execute("SELECT image FROM filaments WHERE id=?", (item_id,)).fetchone()
     if not old:
         abort(404)
@@ -476,6 +479,8 @@ import backup  # noqa: E402
 import nfc  # noqa: E402
 import studio  # noqa: E402
 import stats  # noqa: E402
+import library  # noqa: E402
+import makerworld  # noqa: E402
 from bambu import ensure_catalog  # noqa: E402
 
 app.register_blueprint(bambu_bp)
@@ -487,11 +492,16 @@ app.register_blueprint(backup.bp)
 app.register_blueprint(nfc.bp)
 app.register_blueprint(studio.bp)
 app.register_blueprint(stats.bp)
+app.register_blueprint(library.bp)
+app.register_blueprint(makerworld.bp)
 init_db()
 start_ams(app)
 units.init_schema()
 tasks.init_schema()
 studio.init_schema()
+library.init_schema()
+library.worker()
+makerworld.scheduler()
 ensure_catalog(app)
 studio.ensure_presets()
 backup.scheduler()
