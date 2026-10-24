@@ -88,6 +88,58 @@ def _fan_pct(v):
         return None
 
 
+def _slot(ams_id: int, tray: int | None) -> dict | None:
+    if ams_id in (254, 255):                       # externe Spule
+        return {"ams_id": 255, "tray_id": None}
+    if 0 <= ams_id < 4 or 128 <= ams_id < 136:     # AMS (2 Pro) 0–3, AMS HT 128–135
+        return {"ams_id": ams_id, "tray_id": 0 if ams_id >= 128 else tray}
+    return None
+
+
+def active_tray(raw: dict, tray_now) -> dict | None:
+    """Aktiver Slot.
+
+    H2-Serie: ``device.extruder.info[n].snow`` = (AMS-ID << 8) | Slot je Düse, die aktive Düse steht in
+    ``device.extruder.state`` (Bits 4–7). Das alte ``ams.tray_now`` bleibt dort beim automatischen
+    Umschalten auf Nachbarslots oft auf dem zuerst geladenen Slot stehen – darum hat ``snow`` Vorrang.
+    Ältere Modelle: ``ams.tray_now`` = AMS*4 + Slot, 254/255 = externe Spule, ≥128 = AMS HT.
+    """
+    ext = (raw.get("device") or {}).get("extruder") or {}
+    info = [e for e in ext.get("info") or [] if isinstance(e, dict) and "snow" in e]
+    if info:
+        try:
+            cur = (int(ext.get("state") or 0) >> 4) & 0xF
+        except (TypeError, ValueError):
+            cur = 0
+        e = next((e for e in info if _int0(e.get("id")) == cur), info[0] if len(info) == 1 else None)
+        if e is not None:
+            sn = _int0(e.get("snow"), 0xFFFF)
+            if sn != 0xFFFF:
+                hit = _slot(sn >> 8, sn & 0xFF)
+                if hit:
+                    return hit
+            else:
+                return None                        # Düse hat gerade nichts geladen
+    try:
+        tn = int(tray_now) if tray_now not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+    if tn is None or tn == 255:
+        return None
+    if tn == 254:
+        return {"ams_id": 255, "tray_id": None}
+    if tn >= 128:
+        return _slot(tn, 0)
+    return _slot(tn // 4, tn % 4)
+
+
+def _int0(v, default=0):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
 def derive(raw: dict, model: str | None, tray_now) -> dict:
     """Rohstatus → aufbereiteter Status für die UI."""
     dev = raw.get("device") or {}
@@ -133,18 +185,7 @@ def derive(raw: dict, model: str | None, tray_now) -> dict:
     lights = {l.get("node"): l.get("mode") for l in raw.get("lights_report") or []}
     s["light"] = lights.get("chamber_light")
 
-    # aktiver Slot
-    tn = None
-    try:
-        tn = int(tray_now) if tray_now not in (None, "") else None
-    except (TypeError, ValueError):
-        pass
-    if tn is not None and tn not in (254, 255) and tn < 128:
-        s["tray_now"] = {"ams_id": tn // 4, "tray_id": tn % 4}
-    elif tn == 254:  # externe Spule
-        s["tray_now"] = {"ams_id": 255, "tray_id": None}
-    else:
-        s["tray_now"] = None
+    s["tray_now"] = active_tray(raw, tray_now)
 
     # Fehler / HMS
     msgs = []

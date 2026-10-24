@@ -360,3 +360,16 @@ def test_makerworld_sync_mocked(client, monkeypatch):
     assert len([x for x in client.get("/api/library/models?source=makerworld").json if x["title"] == "Wandhalter"]) == 1
     assert makerworld.parse_ref("https://makerworld.com/de/collections/5565530-desk") == ("collection", 5565530)
     assert makerworld.parse_ref("https://makerworld.com/en/models/1769930-x#profileId-1") == ("design", 1769930)
+
+
+def test_active_tray_h2_snow():
+    """H2-Serie: aktiver Slot aus extruder.info[].snow, nicht aus dem hängenden ams.tray_now."""
+    from printer_status import active_tray, derive
+    ext = lambda state, *snows: {"device": {"extruder": {"state": state, "info": [{"id": i, "snow": s} for i, s in enumerate(snows)]}}}  # noqa: E731
+    assert active_tray({}, "7") == {"ams_id": 1, "tray_id": 3}                 # klassisch: AMS B Slot 4
+    assert active_tray({}, "128") == {"ams_id": 128, "tray_id": 0}             # AMS HT
+    assert active_tray({}, 255) is None and active_tray({}, 254)["ams_id"] == 255
+    assert active_tray(ext(0, (1 << 8) | 3), "3") == {"ams_id": 1, "tray_id": 3}   # B3 → B4 umgeschaltet, tray_now hängt auf A4
+    assert active_tray(ext(0x10, 2, 128 << 8), "3") == {"ams_id": 128, "tray_id": 0}  # H2D: rechte Düse aktiv
+    assert active_tray(ext(0, 0xFFFF), "3") is None                            # nichts geladen
+    assert derive({**ext(0, (1 << 8) | 2), "gcode_state": "RUNNING"}, "H2S", "3")["tray_now"] == {"ams_id": 1, "tray_id": 2}
