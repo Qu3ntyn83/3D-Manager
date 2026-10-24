@@ -82,6 +82,14 @@ curl -fsSL https://raw.githubusercontent.com/Qu3ntyn83/3D-Manager/main/scripts/m
 sudo bash migrate.sh
 ```
 
+**Druckdateien und Backups auf ein NAS (SMB)** – z. B. `\\192.168.178.241\Docker\3D-Manager`:
+
+```bash
+sudo bash scripts/move-storage-to-smb.sh        # Variablen: NAS, SHARE, SUBDIR, MNT
+```
+
+Das Skript hängt die Freigabe per systemd dauerhaft ein (Docker startet erst danach), kopiert `data/library` und `data/backups`, ergänzt `docker-compose.override.yml` und startet neu. Fehlt das NAS, startet der Container nicht, statt leer weiterzulaufen. Die Datenbank bleibt lokal (SQLite über SMB ist nicht sperrsicher), ihre täglichen Sicherungen liegen aber auf dem NAS.
+
 **Update**
 
 ```bash
