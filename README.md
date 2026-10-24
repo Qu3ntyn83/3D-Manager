@@ -90,6 +90,14 @@ sudo bash scripts/move-storage-to-smb.sh        # Variablen: NAS, SHARE, SUBDIR,
 
 Das Skript hängt die Freigabe per systemd dauerhaft ein (Docker startet erst danach), kopiert `data/library` und `data/backups`, ergänzt `docker-compose.override.yml` und startet neu. Fehlt das NAS, startet der Container nicht, statt leer weiterzulaufen. Die Datenbank bleibt lokal (SQLite über SMB ist nicht sperrsicher), ihre täglichen Sicherungen liegen aber auf dem NAS.
 
+**Aufräumen** nach Umstieg und NAS-Umzug – fragt vor jedem Löschen nach (`DRY=1` zeigt nur an):
+
+```bash
+sudo bash scripts/cleanup.sh
+```
+
+Entfernt alte lokale Kopien (`data/*.vor-nas-*` nur, wenn das NAS mindestens gleich viele Dateien hat), das alte `/opt/3d-management`, verwaiste Bibliotheksdateien und Vorschaubilder (fehlende Vorschauen werden neu erzeugt, doppelte Dateien nur auf eigene Frage), den alten Container und alte Images sowie den Build-Cache. Docker-Volumes werden nur aufgelistet, nie gelöscht.
+
 **Update**
 
 ```bash
@@ -174,6 +182,7 @@ Handy-Browser können Bambu-Tags (MIFARE Classic) nicht lesen. Dafür gibt es di
 | GET/PUT/DELETE | `/api/library/models/<id>` | Modell mit Dateien, Tags, Sammlungen |
 | GET | `/api/library/files/<id>/<name>` | Datei herunterladen |
 | GET | `/api/library/tags`, `/api/library/collections` | Tags, Sammlungen |
+| GET/POST | `/api/library/cleanup` | Bibliothek prüfen / bereinigen (`{"duplicates": true}` entfernt auch Duplikate) |
 | POST | `/api/makerworld/sync`, `/api/makerworld/import` | MakerWorld synchronisieren / Link übernehmen |
 | GET | `/api/export`, `/api/export.csv?kind=filaments` | Backup / CSV |
 
