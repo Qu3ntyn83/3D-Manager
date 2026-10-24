@@ -690,6 +690,20 @@ def _job_out(c, r, fil):
     return d
 
 
+@bp.get("/printers/<int:pid>/slot-debug")
+def slot_debug(pid):
+    """Rohdaten zur Erkennung des aktiven Slots (zur Fehlersuche)."""
+    pc = manager.conns.get(pid)
+    if not pc or not pc.raw:
+        abort(404)
+    with pc._lock:
+        raw = dict(pc.raw)
+        tn = pc.tray_now
+    from printer_status import active_tray
+    return jsonify({"tray_now": tn, "extruder": (raw.get("device") or {}).get("extruder"),
+                    "erkannt": active_tray(raw, tn), "gcode_state": raw.get("gcode_state")})
+
+
 @bp.get("/status")
 def printer_status():
     """Kompakter Status aller Drucker (für Kopfzeile und Drucker-Tab)."""
