@@ -285,6 +285,35 @@ def test_library_upload_tags_collections(client):
     assert not library.file_path(fid, "stl").exists()
 
 
+def test_library_cleanup(client):
+    import io
+    import library
+    up = lambda name, data: client.post("/api/library/models", data={"files": [(io.BytesIO(data), name)]},  # noqa: E731
+                                        content_type="multipart/form-data").json["ids"][0]
+    a, b, gone = up("A.stl", _stl_bytes()), up("B.stl", _stl_bytes()), up("C.stl", _stl_bytes() + b"\0")
+    fa, fb, fc = (client.get(f"/api/library/models/{m}").json["file_list"][0]["id"] for m in (a, b, gone))
+    for f in (fa, fb, fc):
+        library.analyze_now(f)
+    (library.FILE_DIR / "999999.stl").write_bytes(b"alt")          # Datei ohne Eintrag
+    (library.THUMB_DIR / "m999999.png").write_bytes(b"png")        # Cover ohne Modell
+    library.file_path(fc, "stl").unlink()                          # Eintrag ohne Datei
+    library.thumb_path(fa).unlink()                                # Vorschau fehlt
+    r = client.get("/api/library/cleanup").json
+    assert r["counts"]["orphan_files"] == 1 and r["counts"]["orphan_thumbs"] == 1
+    assert [x["id"] for x in r["missing_files"]] == [fc] and [x["id"] for x in r["missing_thumbs"]] == [fa]
+    assert r["duplicates"][0]["keep"]["id"] == fa and r["duplicates"][0]["remove"][0]["id"] == fb
+    assert gone in [m["id"] for m in r["empty_models"]]
+    assert (library.FILE_DIR / "999999.stl").exists()              # Bericht löscht nichts
+    r = client.post("/api/library/cleanup", json={}).json
+    assert not (library.FILE_DIR / "999999.stl").exists() and r["freed_bytes"] >= 6
+    assert library.file_path(fb, "stl").exists()                   # Duplikate nur auf Wunsch
+    client.post("/api/library/cleanup", json={"duplicates": True})
+    assert not library.file_path(fb, "stl").exists() and library.file_path(fa, "stl").exists()
+    library.analyze_now(fa)
+    r = client.get("/api/library/cleanup").json
+    assert not any(r["counts"][k] for k in ("orphan_files", "orphan_thumbs", "missing_files", "missing_thumbs", "duplicates"))
+
+
 def test_makerworld_sync_mocked(client, monkeypatch):
     """Sammlungen → Modelle mit Tags → 3MF-Download (API-Antworten simuliert)."""
     import io

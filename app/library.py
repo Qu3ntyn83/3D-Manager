@@ -480,3 +480,89 @@ def lib_stats():
         return jsonify({"models": c.execute("SELECT COUNT(*) FROM lib_models").fetchone()[0], "files": r["n"], "bytes": r["bytes"],
                         "makerworld": c.execute("SELECT COUNT(*) FROM lib_models WHERE source='makerworld'").fetchone()[0],
                         "dir": str(LIB_DIR)})
+
+
+# ---------------------------------------------------------------- Aufräumen
+FILE_RE = re.compile(r"^(\d+)\.(3mf|stl)$")
+THUMB_RE = re.compile(r"^(m?)(\d+)\.png$")
+
+
+def cleanup(apply: bool = False, dups: bool = False) -> dict:
+    """Prüft Bibliothek und Ablage. Ohne apply nur Bericht.
+
+    apply: verwaiste Dateien/Vorschaubilder löschen, Einträge ohne Datei entfernen, fehlende Vorschauen neu erzeugen.
+    dups:  zusätzlich doppelte Dateien (gleicher Inhalt in mehreren Modellen) entfernen – die älteste bleibt.
+    """
+    rep = {"orphan_files": [], "orphan_thumbs": [], "missing_files": [], "missing_thumbs": [],
+           "duplicates": [], "empty_models": [], "freed_bytes": 0, "applied": apply}
+    with conn() as c:
+        files = {r["id"]: r for r in c.execute("SELECT id, model_id, name, kind, size, sha1, has_thumb, meta FROM lib_files")}
+        models = {r["id"]: r for r in c.execute("SELECT id, title, source, mw_design_id, cover FROM lib_models")}
+        # Dateien in der Ablage ohne Eintrag
+        for p in sorted(FILE_DIR.iterdir()) if FILE_DIR.exists() else []:
+            m = FILE_RE.match(p.name)
+            if p.is_file() and (not m or int(m.group(1)) not in files or files[int(m.group(1))]["kind"] != m.group(2)):
+                rep["orphan_files"].append({"name": p.name, "size": p.stat().st_size})
+        for p in sorted(THUMB_DIR.iterdir()) if THUMB_DIR.exists() else []:
+            m = THUMB_RE.match(p.name)
+            ok_ = m and ((m.group(1) == "m" and int(m.group(2)) in models) or (not m.group(1) and int(m.group(2)) in files))
+            if p.is_file() and not ok_:
+                rep["orphan_thumbs"].append({"name": p.name, "size": p.stat().st_size})
+        # Einträge ohne Datei / ohne Vorschau
+        for fid, f in files.items():
+            if not file_path(fid, f["kind"]).exists():
+                rep["missing_files"].append({"id": fid, "model_id": f["model_id"], "name": f["name"]})
+            elif not thumb_path(fid).exists() and f["meta"] is not None and '"error"' not in (f["meta"] or ""):
+                rep["missing_thumbs"].append({"id": fid, "name": f["name"]})
+        missing = {x["id"] for x in rep["missing_files"]}
+        # gleicher Inhalt in mehreren Modellen
+        by_sha: dict = {}
+        for fid, f in sorted(files.items()):
+            if f["sha1"] and fid not in missing:
+                by_sha.setdefault(f["sha1"], []).append(f)
+        for grp in by_sha.values():
+            if len(grp) > 1:
+                rep["duplicates"].append({"keep": {"id": grp[0]["id"], "model_id": grp[0]["model_id"], "name": grp[0]["name"]},
+                                          "remove": [{"id": f["id"], "model_id": f["model_id"], "name": f["name"], "size": f["size"]}
+                                                     for f in grp[1:]]})
+        # Modelle ohne Datei (MakerWorld-Modelle ohne Download sind gewollt)
+        with_files = {f["model_id"] for fid, f in files.items() if fid not in missing}
+        rep["empty_models"] = [{"id": mid, "title": m["title"]} for mid, m in models.items()
+                               if mid not in with_files and not m["mw_design_id"]]
+
+        if apply:
+            for x in rep["orphan_files"]:
+                (FILE_DIR / x["name"]).unlink(missing_ok=True)
+                rep["freed_bytes"] += x["size"]
+            for x in rep["orphan_thumbs"]:
+                (THUMB_DIR / x["name"]).unlink(missing_ok=True)
+                rep["freed_bytes"] += x["size"]
+            for x in rep["missing_files"]:
+                thumb_path(x["id"]).unlink(missing_ok=True)
+                c.execute("DELETE FROM lib_files WHERE id=?", (x["id"],))
+                c.execute("UPDATE lib_models SET cover=NULL WHERE id=? AND cover=?", (x["model_id"], f"f{x['id']}"))
+            if dups:
+                for g in rep["duplicates"]:
+                    for x in g["remove"]:
+                        f = files[x["id"]]
+                        file_path(x["id"], f["kind"]).unlink(missing_ok=True)
+                        thumb_path(x["id"]).unlink(missing_ok=True)
+                        c.execute("DELETE FROM lib_files WHERE id=?", (x["id"],))
+                        c.execute("UPDATE lib_models SET cover=NULL WHERE id=? AND cover=?", (x["model_id"], f"f{x['id']}"))
+                        rep["freed_bytes"] += x["size"] or 0
+    if apply:
+        for x in rep["missing_thumbs"]:
+            _analyze_later(x["id"])
+    rep["counts"] = {k: len(v) for k, v in rep.items() if isinstance(v, list)}
+    return rep
+
+
+@bp.get("/cleanup")
+def cleanup_report():
+    return jsonify(cleanup(False))
+
+
+@bp.post("/cleanup")
+def cleanup_apply():
+    b = request.get_json(silent=True) or {}
+    return jsonify(cleanup(True, dups=bool(b.get("duplicates"))))
