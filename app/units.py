@@ -27,14 +27,21 @@ CREATE TABLE IF NOT EXISTS spool_units (
   remaining_at TEXT,
   opened_at TEXT, emptied_at TEXT, dried_at TEXT,
   price REAL, purchased_at TEXT, shop TEXT,
-  location TEXT, notes TEXT, created_at TEXT
+  location TEXT, notes TEXT, created_at TEXT,
+  spool INTEGER DEFAULT 1,                 -- mit Spule geliefert
+  refill INTEGER DEFAULT 0                 -- Refill (ohne Spule)
 );
 CREATE INDEX IF NOT EXISTS spool_units_fil ON spool_units(filament_id, status);
 CREATE TABLE IF NOT EXISTS unit_log (unit_id INTEGER, ts TEXT, kind TEXT, delta_g REAL, remaining_g REAL, ref TEXT);
 CREATE INDEX IF NOT EXISTS unit_log_unit ON unit_log(unit_id, ts);
 """
 UNIT_FIELDS = ("status", "initial_g", "remaining_g", "opened_at", "emptied_at", "dried_at",
-               "price", "purchased_at", "shop", "location", "notes")
+               "price", "purchased_at", "shop", "location", "notes", "spool", "refill")
+UNIT_BOOL = ("spool", "refill")
+
+
+def _b(v) -> int:
+    return 1 if v in (True, 1, "1", "true", "ja", "on") else 0
 
 
 def now():
@@ -48,6 +55,14 @@ def today():
 def init_schema():
     with conn() as c:
         c.executescript(SCHEMA)
+        ucols = {r[1] for r in c.execute("PRAGMA table_info(spool_units)")}
+        if "refill" not in ucols:
+            # Spule/Refill gilt jetzt je Box – bisherigen Wert der Sorte auf alle ihre Spulen übertragen
+            c.execute("ALTER TABLE spool_units ADD COLUMN spool INTEGER DEFAULT 1")
+            c.execute("ALTER TABLE spool_units ADD COLUMN refill INTEGER DEFAULT 0")
+            c.execute("""UPDATE spool_units SET
+                           spool = COALESCE((SELECT f.spool FROM filaments f WHERE f.id = spool_units.filament_id), 1),
+                           refill = COALESCE((SELECT f.refill FROM filaments f WHERE f.id = spool_units.filament_id), 0)""")
         have = {r[1] for r in c.execute("PRAGMA table_info(tags)")}
         if have and "unit_id" not in have:
             c.execute("ALTER TABLE tags ADD COLUMN unit_id INTEGER")
@@ -135,6 +150,11 @@ def sync_qty(c, fid):
     n = c.execute("SELECT COUNT(*) FROM spool_units WHERE filament_id=? AND status!='empty'", (fid,)).fetchone()[0]
     sealed = c.execute("SELECT COUNT(*) FROM spool_units WHERE filament_id=? AND status='sealed'", (fid,)).fetchone()[0]
     c.execute("UPDATE filaments SET qty=?, sealed=? WHERE id=?", (n, 1 if sealed and sealed == n else 0, fid))
+    # Spule/Refill der Sorte = Zusammenfassung der vorhandenen Boxen (für Suche, Filter, Kachel)
+    if n > 0:
+        r = c.execute("""SELECT MAX(spool) AS sp, MAX(refill) AS rf FROM spool_units
+                         WHERE filament_id=? AND status!='empty'""", (fid,)).fetchone()
+        c.execute("UPDATE filaments SET spool=?, refill=? WHERE id=?", (r["sp"] or 0, r["rf"] or 0, fid))
     if n > 0:
         c.execute("UPDATE filaments SET ordered_at=NULL WHERE id=? AND ordered_at IS NOT NULL AND ordered_at < ?",
                   (fid, c.execute("SELECT MAX(created_at) FROM spool_units WHERE filament_id=?", (fid,)).fetchone()[0] or ""))
@@ -147,11 +167,17 @@ def add_unit(c, fid, status="sealed", **kw) -> int:
     init = float(kw.get("initial_g") or default_initial(f))
     rem = kw.get("remaining_g")
     rem = init if rem in (None, "") else float(rem)
+    # Spule/Refill: übergeben, sonst wie die zuletzt angelegte Box der Sorte, sonst Wert der Sorte
+    last = c.execute("SELECT spool, refill FROM spool_units WHERE filament_id=? ORDER BY id DESC LIMIT 1", (fid,)).fetchone()
+    ref = last or f
+    spool = _b(kw["spool"]) if kw.get("spool") not in (None, "") else (ref["spool"] if ref["spool"] is not None else 1)
+    refill = _b(kw["refill"]) if kw.get("refill") not in (None, "") else (ref["refill"] or 0)
     cur = c.execute("""INSERT INTO spool_units (filament_id, status, initial_g, remaining_g, remaining_src, remaining_at,
-                       opened_at, price, purchased_at, shop, location, notes, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       opened_at, price, purchased_at, shop, location, notes, created_at, spool, refill)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (fid, status, init, rem, "full", now(), today() if status == "open" else None,
                      kw.get("price") if kw.get("price") not in ("", None) else f["price"], kw.get("purchased_at") or today(),
-                     kw.get("shop"), kw.get("location") or f["location"], kw.get("notes"), now()))
+                     kw.get("shop"), kw.get("location") or f["location"], kw.get("notes"), now(), spool, refill))
     sync_qty(c, fid)
     return cur.lastrowid
 
@@ -226,11 +252,11 @@ def ams_delta(c, tag_key, delta_pct, full_g):
             consume(c, t["unit_id"], delta_pct / 100 * (u["initial_g"] or full_g or 1000), "ams", f"AMS −{delta_pct} %")
 
 
-def adjust_filament(c, fid, delta):
+def adjust_filament(c, fid, delta, status="sealed", **kw):
     """+/- im Inventar: + legt eine OVP-Spule an, − markiert eine Spule als leer."""
     if delta > 0:
         for _ in range(delta):
-            add_unit(c, fid, "sealed")
+            add_unit(c, fid, status, **kw)
     elif delta < 0:
         for _ in range(-delta):
             u = c.execute("""SELECT * FROM spool_units WHERE filament_id=? AND status!='empty'
@@ -241,10 +267,22 @@ def adjust_filament(c, fid, delta):
     sync_qty(c, fid)
 
 
-def reconcile_qty(c, fid, target):
+def reconcile_qty(c, fid, target, status="sealed", **kw):
     cur = c.execute("SELECT COUNT(*) FROM spool_units WHERE filament_id=? AND status!='empty'", (fid,)).fetchone()[0]
     if target is not None and int(target) != cur:
-        adjust_filament(c, fid, int(target) - cur)
+        adjust_filament(c, fid, int(target) - cur, status, **kw)
+
+
+def set_pack(c, fids, vals: dict):
+    """Spule/Refill für alle vorhandenen (nicht leeren) Boxen der Sorten setzen."""
+    vals = {k: _b(v) for k, v in vals.items() if k in UNIT_BOOL}
+    if not vals or not fids:
+        return
+    q = ",".join("?" * len(fids))
+    c.execute(f"UPDATE spool_units SET {','.join(k + '=?' for k in vals)} WHERE filament_id IN ({q}) AND status!='empty'",
+              [*vals.values(), *fids])
+    for fid in fids:
+        sync_qty(c, fid)
 
 
 def mark_empty(c, uid):
@@ -306,7 +344,8 @@ def create_unit():
     b = request.get_json(force=True)
     with conn() as c:
         uid = add_unit(c, int(b["filament_id"]), b.get("status") or "sealed",
-                       **{k: b.get(k) for k in ("initial_g", "remaining_g", "price", "purchased_at", "shop", "location", "notes")})
+                       **{k: b.get(k) for k in ("initial_g", "remaining_g", "price", "purchased_at", "shop", "location", "notes",
+                                                "spool", "refill")})
     return jsonify({"ok": True, "id": uid}), 201
 
 
@@ -318,6 +357,11 @@ def edit_unit(uid):
         if not u:
             abort(404)
         vals = {k: (b[k] if b[k] != "" else None) for k in UNIT_FIELDS if k in b}
+        for k in UNIT_BOOL:
+            if k in vals:
+                vals[k] = _b(vals[k])
+        if vals.get("status") == "sealed" and u["status"] == "open":
+            vals["opened_at"] = None  # versehentlich geöffnet → wieder OVP
         if "remaining_g" in vals and vals["remaining_g"] is not None:
             set_remaining(c, uid, vals.pop("remaining_g"), "manual", "manuell gesetzt")
         if vals.get("status") == "empty" and u["status"] != "empty":

@@ -145,7 +145,8 @@ def _import(conn, data, replace=False):
     if replace:
         conn.execute("DELETE FROM filaments")
         conn.execute("DELETE FROM materials")
-    unit_cols = ("status", "initial_g", "remaining_g", "opened_at", "emptied_at", "dried_at", "price", "purchased_at", "shop", "location", "notes")
+    unit_cols = ("status", "initial_g", "remaining_g", "opened_at", "emptied_at", "dried_at", "price", "purchased_at", "shop", "location", "notes",
+                 "spool", "refill")
     for f in data.get("filaments", []):
         c = _clean(f, FIL_FIELDS)
         cur = conn.execute(f"INSERT INTO filaments ({','.join(c)}) VALUES ({','.join('?' * len(c))})", list(c.values()))
@@ -178,8 +179,10 @@ def _crud(table, fields, kind):
         cur = db().execute(f"INSERT INTO {table} ({','.join(c)}) VALUES ({','.join('?' * len(c))})", list(c.values()))
         db().commit()
         if table == "filaments":
+            # Verpackung (OVP/Spule/Refill) gilt für die beim Anlegen erzeugten Boxen
             with uconn() as uc:
-                units.reconcile_qty(uc, cur.lastrowid, c.get("qty", 1))
+                units.reconcile_qty(uc, cur.lastrowid, c.get("qty", 1), "sealed" if c.get("sealed", 1) else "open",
+                                    spool=c.get("spool", 1), refill=c.get("refill", 0))
         return get(cur.lastrowid), 201
 
     def get(item_id):
@@ -197,12 +200,25 @@ def _crud(table, fields, kind):
     def update(item_id):
         c = _clean(request.get_json(force=True), fields)
         qty = c.pop("qty", None) if table == "filaments" else None
+        pack = {}
+        if table == "filaments":
+            # OVP, Spule und Refill gehören zur einzelnen Box: OVP ergibt sich aus den Boxen,
+            # Spule/Refill hier gesetzt gelten für alle vorhandenen Boxen der Sorte
+            c.pop("sealed", None)
+            pack = {k: c.pop(k) for k in ("spool", "refill") if k in c}
         if c:
             db().execute(f"UPDATE {table} SET {','.join(k + '=?' for k in c)} WHERE id=?", [*c.values(), item_id])
             db().commit()
-        if qty is not None:
+        if qty is not None or pack:
             with uconn() as uc:
-                units.reconcile_qty(uc, item_id, qty)
+                if pack:
+                    has = uc.execute("SELECT 1 FROM spool_units WHERE filament_id=? AND status!='empty'", (item_id,)).fetchone()
+                    if has:
+                        units.set_pack(uc, [item_id], pack)
+                    else:
+                        uc.execute(f"UPDATE filaments SET {','.join(k + '=?' for k in pack)} WHERE id=?", [*pack.values(), item_id])
+                if qty is not None:
+                    units.reconcile_qty(uc, item_id, qty)
         if table == "filaments" and set(c) & {"studio", "colors", "profile", "material", "brand"}:
             studio.recheck_all()
         return get(item_id)
@@ -244,6 +260,7 @@ def _crud(table, fields, kind):
             abort(400, "keine Auswahl")
         allowed = [f for f in BULK_FIELDS.get(table, []) if f in fields]
         c = _clean(b.get("set") or {}, allowed)
+        pack = {k: c.pop(k) for k in ("spool", "refill") if k in c} if table == "filaments" else {}
         prof = b.get("profile") if table == "filaments" and isinstance(b.get("profile"), dict) else None
         q = ",".join("?" * len(ids))
         if c:
@@ -275,9 +292,16 @@ def _crud(table, fields, kind):
                     uc.execute(f"""UPDATE spool_units SET initial_g=?, remaining_g=? WHERE filament_id IN ({q})
                                    AND status='sealed' AND (remaining_g IS NULL OR remaining_g=initial_g)""",
                                [c["net_weight_g"], c["net_weight_g"], *ids])
+        if pack:
+            with uconn() as uc:
+                units.set_pack(uc, ids, pack)
+                empty = [i for i in ids if not uc.execute("SELECT 1 FROM spool_units WHERE filament_id=? AND status!='empty'", (i,)).fetchone()]
+                if empty:
+                    uc.execute(f"UPDATE filaments SET {','.join(k + '=?' for k in pack)} WHERE id IN ({','.join('?' * len(empty))})",
+                               [*pack.values(), *empty])
         if table == "filaments" and ("studio" in c or prof):
             studio.recheck_all()
-        return jsonify({"ok": True, "count": len(ids), "fields": list(c) + (["profile"] if prof else []) + (["notes"] if note else [])})
+        return jsonify({"ok": True, "count": len(ids), "fields": list(c) + list(pack) + (["profile"] if prof else []) + (["notes"] if note else [])})
 
     base = f"/api/{table}"
     app.add_url_rule(f"{base}/bulk", f"{table}_bulk", bulk, methods=["POST"])
@@ -393,7 +417,8 @@ def export_json():
         "filaments": [_row(r, "f") for r in db().execute("SELECT * FROM filaments ORDER BY id")],
         "materials": [_row(r, "m") for r in db().execute("SELECT * FROM materials ORDER BY id")],
     }
-    unit_cols = ("status", "initial_g", "remaining_g", "opened_at", "emptied_at", "dried_at", "price", "purchased_at", "shop", "location", "notes")
+    unit_cols = ("status", "initial_g", "remaining_g", "opened_at", "emptied_at", "dried_at", "price", "purchased_at", "shop", "location", "notes",
+                 "spool", "refill")
     for f in data["filaments"]:
         f["units"] = [{k: r[k] for k in unit_cols} for r in db().execute("SELECT * FROM spool_units WHERE filament_id=? ORDER BY id", (f["id"],))]
     for f in data["filaments"] + data["materials"]:

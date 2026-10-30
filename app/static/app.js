@@ -202,6 +202,7 @@ const TCOLS = [
   { k: "rfid", t: "Spulen / Rest", s: f => (f.units || []).reduce((a, u) => a + (u.status !== "empty" ? u.remaining_g || 0 : 0), 0), num: true },
   { k: "last_check", t: "Geprüft", s: f => f.last_check || "" },
 ];
+function markPartial() { $$("#filGrid input.tog[data-part]").forEach(i => { i.indeterminate = true; }); }
 function renderTable(list) {
   const col = TCOLS.find(c => c.k === state.tsort.key);
   if (col) list = [...list].sort((a, b) => { const x = col.s(a), y = col.s(b); return (x > y ? 1 : x < y ? -1 : 0) * state.tsort.dir; });
@@ -222,18 +223,34 @@ function renderTable(list) {
         <td class="mono">${esc(f.sku || "")}</td>
         <td class="mono">${f.colors[0].slice(0, 7)}<span class="src src-${f.swatch_source}" title="${esc(SRC_LONG[f.swatch_source] || "")}"></span></td>
         <td class="num nolink"><div class="qty"><button data-d="-1">−</button><span class="n ${f.qty === 0 ? "zero" : ""}">${f.qty}</span><button data-d="1">+</button></div></td>
-        ${["sealed", "spool", "refill", "sample"].map(k => `<td class="c nolink"><input type="checkbox" class="tog" data-f="${k}" ${f[k] ? "checked" : ""}></td>`).join("")}
+        ${["sealed", "spool", "refill", "sample"].map(k => togCell(f, k)).join("")}
         <td class="c">${rfidFlag(f, true)}</td>
         <td>${esc(f.location || "")}</td>
         <td>${typeof unitCell === "function" ? unitCell(f) : ""}</td>
         <td class="mono">${fmtDate(f.last_check)}</td>
       </tr>`;
     }).join("")}</tbody></table></div>`;
+  markPartial();
 }
 const bar = s => {
   const p = s.percent ?? 0;
   return `<span class="bar" title="${s.net_weight ?? "?"} / ${s.total_net_weight ?? "?"} g"><i style="width:${Math.max(0, Math.min(100, p))}%"></i></span><em>${s.net_weight ?? "?"} g</em>`;
 };
+/* OVP/Spule/Refill gehören zur einzelnen Box: Spalte zeigt alle ✓ / teilweise ◐ / keine.
+   Spule/Refill per Klick für alle Boxen der Sorte setzen, OVP nur in der Spulenliste. */
+function packCount(f, k) {
+  const us = (f.units || []).filter(u => u.status !== "empty");
+  const n = us.filter(u => k === "sealed" ? u.status === "sealed" : u[k]).length;
+  return { n, of: us.length };
+}
+function togCell(f, k) {
+  if (k === "sample") return `<td class="c nolink"><input type="checkbox" class="tog" data-f="sample" ${f.sample ? "checked" : ""}></td>`;
+  const { n, of } = packCount(f, k);
+  if (!of) return `<td class="c nolink"><span class="muted">–</span></td>`;
+  const part = n > 0 && n < of, name = { sealed: "OVP", spool: "Spule", refill: "Refill" }[k];
+  const title = `${n} von ${of} Boxen ${name}` + (k === "sealed" ? " – öffnen in der Spulenliste" : " – Klick setzt alle Boxen");
+  return `<td class="c nolink" title="${title}"><input type="checkbox" class="tog" data-f="${k}" ${n === of ? "checked" : ""} ${part ? "data-part" : ""} ${k === "sealed" ? "disabled" : ""} aria-label="${title}">${part ? `<small class="muted">${n}/${of}</small>` : ""}</td>`;
+}
 async function toggleField(id, field, val) {
   const upd = await api(`/api/filaments/${id}`, { method: "PATCH", body: JSON.stringify({ [field]: val }) });
   Object.assign(state.fil.find(f => f.id === id), upd);
@@ -855,6 +872,9 @@ function openFil(f) {
   setPhoto(f?.image);
   $(".photo .file-btn").hidden = !f;
   renderRfidBox(); updLinks(filForm);
+  // OVP/Spule/Refill: beim Anlegen für die neuen Boxen, danach je Box in der Spulenliste
+  $("#packNew").hidden = !!f;
+  $$("#packNew input").forEach(i => { i.disabled = !!f; });
   if (typeof onOpenFil === "function") onOpenFil(f);
   filDlg.showModal();
   if (!f) $("#catQ").focus();
@@ -894,7 +914,7 @@ filForm.onsubmit = async e => {
   e.preventDefault();
   const body = { colors: draftColors };
   for (const el of filForm.elements) {
-    if (!el.name) continue;
+    if (!el.name || el.disabled) continue;
     body[el.name] = el.type === "checkbox" ? el.checked : el.value;
   }
   if (body.last_check === "") body.last_check = null;

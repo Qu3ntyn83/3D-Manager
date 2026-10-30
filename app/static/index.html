@@ -327,9 +327,10 @@
     </div>
 
     <fieldset class="checks">
-      <label><input type="checkbox" name="sealed"> OVP</label>
-      <label><input type="checkbox" name="spool"> Spule</label>
-      <label><input type="checkbox" name="refill"> Refill</label>
+      <span class="packnew" id="packNew"><small class="muted">Neue Spulen:</small>
+        <label><input type="checkbox" name="sealed"> OVP</label>
+        <label><input type="checkbox" name="spool"> Spule</label>
+        <label><input type="checkbox" name="refill"> Refill</label></span>
       <label><input type="checkbox" name="sample"> Muster gedruckt</label>
     </fieldset>
 
@@ -358,7 +359,7 @@
     </fieldset>
 
     <fieldset class="units" id="unitBox">
-      <legend>Spulen</legend>
+      <legend>Spulen <small class="muted">– OVP, Spule und Refill gelten je Box</small></legend>
       <div id="unitList"></div>
       <div class="row"><button type="button" class="ghost" id="unitAdd">+ Spule (OVP)</button><button type="button" class="ghost" id="unitLabels">Etiketten drucken</button></div>
     </fieldset>
@@ -503,7 +504,7 @@
         <label>Mindestbestand<input data-bs="min_qty" inputmode="numeric" autocomplete="off"></label>
       </div>
       <div class="bulk-flags">
-        <label>Spule<select data-bb="spool"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label><label>Refill<select data-bb="refill"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label><label>Muster gedruckt<select data-bb="sample"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label>
+        <label>Spule (alle Boxen)<select data-bb="spool"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label><label>Refill (alle Boxen)<select data-bb="refill"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label><label>Muster gedruckt<select data-bb="sample"><option value="">unverändert</option><option value="1">ja</option><option value="0">nein</option></select></label>
       </div>
     </fieldset>
     <fieldset><legend>Preis &amp; Gewicht</legend>

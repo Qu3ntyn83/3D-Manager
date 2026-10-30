@@ -373,3 +373,32 @@ def test_active_tray_h2_snow():
     assert active_tray(ext(0x10, 2, 128 << 8), "3") == {"ams_id": 128, "tray_id": 0}  # H2D: rechte Düse aktiv
     assert active_tray(ext(0, 0xFFFF), "3") is None                            # nichts geladen
     assert derive({**ext(0, (1 << 8) | 2), "gcode_state": "RUNNING"}, "H2S", "3")["tray_now"] == {"ams_id": 1, "tray_id": 2}
+
+
+def test_pack_per_unit(client):
+    """OVP/Spule/Refill gelten je Box; die Sorte fasst nur zusammen."""
+    f = client.post("/api/filaments", json={"brand": "Test", "material": "PLA", "color_name": "Box", "qty": 2,
+                                            "colors": ["#123456FF"], "sealed": True, "spool": False, "refill": True}).json
+    u1, u2 = (u["id"] for u in f["units"])
+    assert all(u["status"] == "sealed" and u["refill"] == 1 and u["spool"] == 0 for u in f["units"])
+    # eine Box ist doch eine Spule, die andere wird geöffnet
+    client.patch(f"/api/units/{u1}", json={"spool": True, "refill": False})
+    client.post(f"/api/units/{u2}/open")
+    g = client.get(f"/api/filaments/{f['id']}").json
+    by = {u["id"]: u for u in g["units"]}
+    assert by[u1]["spool"] == 1 and by[u1]["refill"] == 0 and by[u1]["status"] == "sealed"
+    assert by[u2]["refill"] == 1 and by[u2]["status"] == "open"
+    assert g["spool"] and g["refill"] and not g["sealed"]            # Sorte = Zusammenfassung
+    # OVP an der Sorte setzen ändert keine Box
+    client.put(f"/api/filaments/{f['id']}", json={"sealed": True})
+    assert client.get(f"/api/units/{u2}").json["status"] == "open"
+    # neue Box übernimmt die Verpackung der zuletzt angelegten
+    client.post(f"/api/filaments/{f['id']}/adjust", json={"delta": 1})
+    new = max(client.get(f"/api/filaments/{f['id']}").json["units"], key=lambda u: u["id"])
+    assert new["refill"] == 1 and new["spool"] == 0
+    # versehentlich geöffnet → wieder OVP
+    client.patch(f"/api/units/{u2}", json={"status": "sealed"})
+    assert client.get(f"/api/units/{u2}").json["opened_at"] is None
+    # Massenbearbeitung: Refill für alle Boxen
+    client.post("/api/filaments/bulk", json={"ids": [f["id"]], "set": {"refill": False}})
+    assert not any(u["refill"] for u in client.get(f"/api/filaments/{f['id']}").json["units"] if u["status"] != "empty")

@@ -661,6 +661,13 @@ button.mini, .ghost.mini { padding: 2px 8px; font-size: 11.5px; min-height: 0; }
 .unitrow.flash { animation: flash 1.6s ease 2; }
 @keyframes flash { 50% { background: color-mix(in srgb, var(--accent) 25%, transparent); } }
 .ucode { font-size: 12px; color: var(--muted); }
+.upack { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.upack .chip { padding: 2px 8px; min-height: 0; font-size: 11.5px; border-radius: 999px; border: 1px solid var(--line);
+  background: transparent; color: var(--muted); cursor: pointer; }
+.upack .chip.on { border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.packnew { display: inline-flex; flex-wrap: wrap; gap: 12px; align-items: center; padding-right: 12px; border-right: 1px solid var(--line); }
+.packnew[hidden] { display: none; }
+.tbl td.c small { display: block; font-size: 10px; line-height: 1; }
 .ubar { display: flex; align-items: center; gap: 4px; }
 .ubar small { color: var(--muted); font-size: 10.5px; }
 .umeta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
