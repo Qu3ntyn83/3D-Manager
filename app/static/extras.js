@@ -7,7 +7,7 @@ const fmtMoney = v => v == null ? "–" : `${Number(v).toLocaleString("de-DE", {
 const fmtG = g => g == null ? "–" : g >= 1000 ? `${(g / 1000).toLocaleString("de-DE", { maximumFractionDigits: 2 })} kg` : `${Math.round(g)} g`;
 const fmtDay = d => d ? new Date(d.length > 10 ? d : d + "T00:00").toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "–";
 const daysSince = d => d ? Math.floor((Date.now() - new Date(d.slice(0, 10) + "T00:00").getTime()) / 864e5) : null;
-const STATUS = { open: "offen", empty: "leer" };
+const STATUS = { sealed: "OVP", open: "offen", empty: "leer" };
 
 async function afterLoad() {
   try { state.settings = await api("/api/settings"); } catch {}
@@ -54,7 +54,9 @@ function unitSummary(f) {
 function unitTags(f) {
   const s = unitSummary(f);
   if (!s.us.length) return "";
-  const parts = [s.sealed && `${s.sealed}× OVP`, s.open && `${s.open}× offen · ${fmtG(s.openRem)}`].filter(Boolean);
+  const rf = s.us.filter(u => u.refill).length;
+  const parts = [s.sealed && `${s.sealed}× OVP`, s.open && `${s.open}× offen · ${fmtG(s.openRem)}`,
+    rf && rf < s.us.length && `${rf}× Refill`].filter(Boolean);
   return `<span class="tag" title="Restgewicht gesamt ${fmtG(s.rem)}">${esc(parts.join(" · "))}</span>` +
     (s.dry.length ? `<span class="tag ${s.dry.some(d => d.state === "due") ? "low" : "warn"}" title="${esc(s.dry.map(d => `${d.code}: ${d.days} Tage offen`).join("\n"))}">💧 trocknen</span>` : "") +
     (f.ordered_at ? `<span class="tag ams" title="bestellt am ${fmtDay(f.ordered_at)}">bestellt</span>` : "");
@@ -86,13 +88,16 @@ function renderUnits(f) {
     const since = u.dried_at && u.dried_at >= (u.opened_at || "") ? `getrocknet ${fmtDay(u.dried_at)}` : u.opened_at ? `offen seit ${fmtDay(u.opened_at)} (${daysSince(u.opened_at)} T.)` : u.status === "open" ? "Öffnungsdatum unbekannt" : "";
     return `<div class="unitrow ${u.status}" data-uid="${u.id}">
       <span class="ucode mono">${u.code}</span>
-      <span class="pill ${u.status === "open" ? "run" : u.status === "sealed" ? "done" : ""}">${STATUS[u.status]}</span>
+      <span class="upack"><span class="pill ${u.status === "open" ? "run" : u.status === "sealed" ? "done" : ""}">${STATUS[u.status]}</span>${u.status !== "empty" ? `
+        <button type="button" class="chip ${u.spool ? "on" : ""}" data-up="spool" aria-pressed="${!!u.spool}" title="Mit Spule geliefert">Spule</button>
+        <button type="button" class="chip ${u.refill ? "on" : ""}" data-up="refill" aria-pressed="${!!u.refill}" title="Refill (ohne Spule)">Refill</button>` : ""}</span>
       <span class="ubar">${barI({ grams: u.remaining_g != null ? Math.round(u.remaining_g) : null, total: u.initial_g, percent: u.percent })}<small>${{ ams: "AMS", weighed: "gewogen", slicer: "Slicer", job: "Druck", manual: "manuell", full: "voll" }[u.remaining_src] || ""}</small></span>
       <span class="umeta">${u.tag ? `<span class="tag ${u.tag.in_ams ? "ams" : "rfid"}" title="RFID ${esc(u.tag.key)}">◉ ${u.tag.slot ? esc(slotName(u.tag.slot[0], u.tag.slot[1])) : "Tag"}</span>` : ""}
         ${since ? `<small class="${d ? (d.state === "due" ? "err" : "warnc") : "muted"}">${esc(since)}${d ? " – trocknen empfohlen" : ""}</small>` : ""}
         ${u.price ? `<small class="muted">${fmtMoney(u.price)}</small>` : ""}</span>
       <span class="uacts">
         ${u.status === "sealed" ? `<button type="button" class="ghost" data-ua="open">öffnen</button>` : ""}
+        ${u.status === "open" && (u.remaining_g == null || u.remaining_g >= (u.initial_g || 1000) - 1) ? `<button type="button" class="ghost" data-ua="reseal" title="Doch noch originalverpackt">OVP</button>` : ""}
         ${u.status !== "empty" ? `<button type="button" class="ghost" data-ua="weigh" title="Restgewicht wiegen">⚖</button>
           <button type="button" class="ghost" data-ua="dry" title="Heute getrocknet">💧</button>
           <button type="button" class="ghost" data-ua="empty" title="Spule ist leer">leer</button>` : ""}
@@ -108,6 +113,13 @@ async function reloadEditing() {
 }
 $("#unitList").addEventListener("click", async e => {
   if (e.target.id === "unitShowEmpty") { state.showEmptyUnits = !state.showEmptyUnits; return renderUnits(editing); }
+  const pk = e.target.closest("[data-up]");
+  if (pk) {
+    const uid = +pk.closest(".unitrow").dataset.uid, k = pk.dataset.up, u = editing.units.find(x => x.id === uid);
+    const body = { [k]: !u[k] };
+    await api(`/api/units/${uid}`, { method: "PATCH", body: JSON.stringify(body) });
+    await reloadEditing(); return toast(`${u.code}: ${body[k] ? "" : "kein "}${k === "spool" ? "Spule" : "Refill"}`);
+  }
   const b = e.target.closest("[data-ua]"); if (!b) return;
   const uid = +b.closest(".unitrow").dataset.uid, a = b.dataset.ua;
   const u = editing.units.find(x => x.id === uid);
@@ -115,6 +127,7 @@ $("#unitList").addEventListener("click", async e => {
   if (a === "label") return openLabels({ units: [uid] });
   if (a === "del" && !confirm(`Spule ${u.code} löschen? (Für aufgebrauchte Spulen besser „leer“.)`)) return;
   if (a === "empty" && !confirm(`Spule ${u.code} ist leer? Ein zugeordneter RFID-Tag wird freigegeben.`)) return;
+  if (a === "reseal") { await api(`/api/units/${uid}`, { method: "PATCH", body: JSON.stringify({ status: "sealed" }) }); await reloadEditing(); return toast(`${u.code} wieder OVP`); }
   if (a === "del") await api(`/api/units/${uid}`, { method: "DELETE" });
   else await api(`/api/units/${uid}/${a}`, { method: "POST", body: "{}" });
   if (a === "dry") state.drying = await api("/api/drying");

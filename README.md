@@ -25,7 +25,7 @@ Selbst gehostete Web-App für den 3D-Druck im Homelab: **Filament-, Material- un
 - **Bambu Studio zeigt das richtige Fremdfilament:** Liegt eine Spule mit umgesetztem Bambu-Tag im AMS, meldet der 3D Manager dem Drucker das passende Profil (eigenes Cloud-Profil oder Systemprofil wie „SUNLU PLA+“), die Inventarfarbe und die Düsentemperatur. Ob der Drucker die Werte übernimmt, wird geprüft und am Slot angezeigt (✓ / ⚠)
 
 **Spulen, Kosten & Planung**
-- **Einzelne Spulen** (S0001 …) statt nur Stückzahl: Status OVP/offen/leer, Restgewicht, Öffnungs- und Trocknungsdatum, Preis, Lagerort; RFID-Tag hängt an der konkreten Spule
+- **Einzelne Spulen** (S0001 …) statt nur Stückzahl: Status OVP/offen/leer und Spule/Refill **je Box** (die Sorte zeigt nur die Zusammenfassung), Restgewicht, Öffnungs- und Trocknungsdatum, Preis, Lagerort; RFID-Tag hängt an der konkreten Spule
 - **Wiegen** mit Tara (Leerspule wird je Sorte gemerkt)
 - **Kosten**: Preis je Spule/kg, Kosten je Druck (Material + Strom), Lagerwert
 - **Übersicht**: Einkaufsliste (Mindestbestand/fast leer, gruppiert nach Shop, „bestellt“-Markierung), Trocknungs-Hinweise (offene Liegezeit je Material, AMS-Feuchte), Verbrauch 12 Monate, nach Material, Top-Farben, „Reicht noch …“-Prognose
