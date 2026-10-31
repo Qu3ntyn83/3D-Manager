@@ -364,6 +364,15 @@
       <div class="row"><button type="button" class="ghost" id="unitAdd">+ Spule (OVP)</button><button type="button" class="ghost" id="unitLabels">Etiketten drucken</button></div>
     </fieldset>
 
+    <fieldset class="rfid" id="rfidBox">
+      <legend>RFID-Tags</legend>
+      <div id="rfidList"></div>
+      <div class="row">
+        <button type="button" class="pickbtn empty wide" id="rfidAdd"><span>RFID-Tag zuordnen … (Suche nach Slot, ID, Farbe)</span><i>🔍</i></button>
+      </div>
+      <p class="muted small" id="rfidHint"></p>
+    </fieldset>
+
     <fieldset class="prof" id="profBox">
       <legend>Druck- &amp; Trocknungsprofil <small id="profFam"></small></legend>
       <div class="form-grid prof-grid">
@@ -389,13 +398,6 @@
       <p class="muted small" id="studioHint"></p>
     </fieldset>
 
-    <fieldset class="rfid" id="rfidBox">
-      <legend>RFID-Tags (AMS &amp; Cloud)</legend>
-      <div id="rfidList"></div>
-      <div class="row">
-        <button type="button" class="pickbtn empty wide" id="rfidAdd"><span>RFID-Tag zuordnen … (Suche nach Slot, ID, Farbe)</span><i>🔍</i></button>
-      </div>
-    </fieldset>
 
     <div class="form-grid links">
       <label>Hersteller-Link<span class="urlrow"><input name="manufacturer_url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://… (Produktseite)"><a class="openlink" target="_blank" rel="noopener noreferrer" hidden>↗</a></span></label>

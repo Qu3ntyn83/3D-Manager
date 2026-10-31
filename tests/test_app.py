@@ -402,3 +402,22 @@ def test_pack_per_unit(client):
     # Massenbearbeitung: Refill für alle Boxen
     client.post("/api/filaments/bulk", json={"ids": [f["id"]], "set": {"refill": False}})
     assert not any(u["refill"] for u in client.get(f"/api/filaments/{f['id']}").json["units"] if u["status"] != "empty")
+
+
+def test_rfid_link_to_unit(client):
+    """Tag direkt einer bestimmten Box der Farbe zuordnen; je Box ein Tag."""
+    a = client.post("/api/nfc/scan", json={"uid": "11111111"}).json["key"]
+    b = client.post("/api/nfc/scan", json={"uid": "22222222"}).json["key"]
+    f = client.post("/api/filaments", json={"brand": "T", "material": "PLA", "color_name": "Zwei", "qty": 2, "colors": ["#00FF00FF"]}).json
+    other = client.post("/api/filaments", json={"brand": "T", "material": "PLA", "color_name": "Fremd", "qty": 1, "colors": ["#0000FFFF"]}).json
+    u1, u2 = (u["id"] for u in f["units"])
+    tag = lambda k: next(x for x in client.get("/api/ams/rfid").json if x["key"] == k)  # noqa: E731
+    client.post(f"/api/ams/rfid/{a}/link", json={"filament_id": f["id"], "unit_id": u2})
+    assert tag(a)["unit_id"] == u2 and tag(a)["filament_ref"] == f["id"]
+    # zweiter Tag auf dieselbe Box → erster bleibt bei der Farbe, aber ohne Box
+    client.post(f"/api/ams/rfid/{b}/link", json={"filament_id": f["id"], "unit_id": u2})
+    assert tag(b)["unit_id"] == u2 and tag(a)["unit_id"] is None and tag(a)["filament_ref"] == f["id"]
+    # Box einer anderen Farbe wird ignoriert → 3D Manager wählt eine Box der Ziel-Farbe
+    client.post(f"/api/ams/rfid/{a}/link", json={"filament_id": other["id"], "unit_id": u1})
+    assert tag(a)["unit_id"] == other["units"][0]["id"]
+    assert [u["tag"]["key"] for u in client.get(f"/api/filaments/{f['id']}").json["units"] if u["tag"]] == [b]

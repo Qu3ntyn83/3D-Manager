@@ -233,7 +233,12 @@ def link_tag(c, tag_key, fid, unit_id=None):
     if fid is None:
         c.execute("UPDATE tags SET unit_id=NULL WHERE tag_key=? OR upper(tray_uuid)=upper(?)", (tag_key, tag_key))
         return None
+    if unit_id and not c.execute("SELECT 1 FROM spool_units WHERE id=? AND filament_id=? AND status!='empty'", (unit_id, fid)).fetchone():
+        unit_id = None  # Box gehört nicht zu dieser Farbe → selbst wählen
     uid = unit_id or pick_unit_for_tag(c, fid, tag_key)
+    if unit_id:  # eine Box hat genau einen Tag: bisherigen Tag dieser Box lösen (bleibt der Farbe zugeordnet)
+        c.execute("UPDATE tags SET unit_id=NULL WHERE unit_id=? AND tag_key!=? AND upper(COALESCE(tray_uuid,''))!=upper(?)",
+                  (unit_id, tag_key, tag_key))
     u = c.execute("SELECT initial_g FROM spool_units WHERE id=?", (uid,)).fetchone()
     c.execute("UPDATE tags SET unit_id=?, full_weight_g=? WHERE tag_key=? OR upper(tray_uuid)=upper(?)",
               (uid, int(u["initial_g"] or 1000), tag_key, tag_key))

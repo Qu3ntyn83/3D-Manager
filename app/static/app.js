@@ -429,29 +429,46 @@ $("#bbConn").addEventListener("change", async e => {
 /* RFID-Bereich im Filament-Dialog */
 function renderRfidBox() {
   const box = $("#rfidBox");
-  const all = state.rfid || [];
-  if (!editing || !all.length) { box.hidden = true; return; }
+  if (!editing) { box.hidden = true; return; }
   box.hidden = false;
+  const all = state.rfid || [];
   const mine = all.filter(t => t.filament_ref === editing.id);
+  const ucode = id => (editing.units || []).find(u => u.id === id)?.code;
   $("#rfidList").innerHTML = mine.length ? mine.map(t => `<div class="rfidrow" data-key="${esc(t.key)}">
       <span class="mono" title="${esc(t.key)}">◉ ${esc(shortKey(t.key))}</span>
+      ${t.unit_id && ucode(t.unit_id) ? `<span class="tag" title="an dieser Box">${esc(ucode(t.unit_id))}</span>` : ""}
       ${barI({ grams: t.grams, total: t.full_weight_g, percent: t.percent })}
       ${t.slot ? `<span class="tag ams">${esc(slotName(t.slot[0], t.slot[1]))}</span>` : ""}
       <small class="muted" title="Was Bambu über den Tag meldet – nur Info">Bambu: ${esc(t.claims || "–")}</small>
       <button type="button" class="ghost" data-unlink-tag>lösen</button></div>`).join("")
     : `<p class="muted">Noch kein RFID-Tag zugeordnet. Jeder Tag lässt sich zuordnen – egal, was Bambu darüber meldet.</p>`;
-  $("#rfidAdd").hidden = !tagItems(editing.id).length;
+  const free = tagItems(editing.id).length;
+  $("#rfidAdd").hidden = false;
+  $("#rfidAdd span").textContent = free ? "RFID-Tag zuordnen … (Suche nach Slot, ID, Farbe)" : "RFID-Tag zuordnen … (noch keine weiteren Tags bekannt)";
+  $("#rfidHint").textContent = typeof window.Android3DM !== "undefined"
+    ? "Oder Tag jetzt ans Handy halten – er wird direkt dieser Farbe zugeordnet."
+    : "Tags erscheinen hier, sobald die Spule einmal im AMS lag, in der Bambu-Cloud steht oder mit der Android-App per NFC gescannt wurde.";
 }
 const shortKey = k => /^(UID|NFC):/.test(k) ? "UID " + k.slice(4, 12) + "…" : k.slice(0, 10) + "…";
 $("#rfidList").addEventListener("click", async e => {
   if (!e.target.matches("[data-unlink-tag]")) return;
   await linkTag(e.target.closest(".rfidrow").dataset.key, null);
-  editing = state.fil.find(f => f.id === editing.id); renderRfidBox();
+  editing = state.fil.find(f => f.id === editing.id); renderRfidBox(); if (typeof renderUnits === "function") renderUnits(editing);
 });
-$("#rfidAdd").onclick = () => openPicker({
-  title: "RFID-Tag zuordnen", items: tagItems(editing.id),
-  onPick: async key => { if (!key) return; await linkTag(key, editing.id); editing = state.fil.find(f => f.id === editing.id); renderRfidBox(); },
-});
+/* Tag zuordnen – an die Farbe (Box wählt der 3D Manager) oder an eine bestimmte Box */
+function pickTagFor(unit) {
+  const items = unit ? tagItems(-1).filter(t => (state.rfid.find(x => x.key === t.value) || {}).unit_id !== unit.id) : tagItems(editing.id);
+  if (!items.length) return toast("Noch keine freien RFID-Tags bekannt – Spule ins AMS legen oder per Handy scannen");
+  openPicker({
+    title: unit ? `RFID-Tag für ${unit.code}` : "RFID-Tag zuordnen", items,
+    onPick: async key => {
+      if (!key) return;
+      await linkTag(key, editing.id, unit?.id);
+      editing = state.fil.find(f => f.id === editing.id); renderRfidBox(); if (typeof renderUnits === "function") renderUnits(editing);
+    },
+  });
+}
+$("#rfidAdd").onclick = () => pickTagFor(null);
 
 /* ---------- AMS live / Tags / Drucker ---------- */
 let amsTimer;
@@ -580,8 +597,8 @@ $("#tBody").addEventListener("click", async e => {
   if (!confirm("Tag vergessen? Er wird beim nächsten Einlegen neu erkannt (ohne Verlinkung).")) return;
   await api(`/api/ams/tags/${encodeURIComponent(key)}`, { method: "DELETE" }); await refreshAll();
 });
-async function linkTag(key, fid) {
-  await api(`/api/ams/rfid/${encodeURIComponent(key)}/link`, { method: "POST", body: JSON.stringify({ filament_id: fid }) });
+async function linkTag(key, fid, unitId = null) {
+  await api(`/api/ams/rfid/${encodeURIComponent(key)}/link`, { method: "POST", body: JSON.stringify({ filament_id: fid, unit_id: unitId }) });
   await refreshAll(); toast(fid ? "Tag zugeordnet" : "Zuordnung gelöst");
 }
 
