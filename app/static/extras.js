@@ -92,7 +92,8 @@ function renderUnits(f) {
         <button type="button" class="chip ${u.spool ? "on" : ""}" data-up="spool" aria-pressed="${!!u.spool}" title="Mit Spule geliefert">Spule</button>
         <button type="button" class="chip ${u.refill ? "on" : ""}" data-up="refill" aria-pressed="${!!u.refill}" title="Refill (ohne Spule)">Refill</button>` : ""}</span>
       <span class="ubar">${barI({ grams: u.remaining_g != null ? Math.round(u.remaining_g) : null, total: u.initial_g, percent: u.percent })}<small>${{ ams: "AMS", weighed: "gewogen", slicer: "Slicer", job: "Druck", manual: "manuell", full: "voll" }[u.remaining_src] || ""}</small></span>
-      <span class="umeta">${u.tag ? `<span class="tag ${u.tag.in_ams ? "ams" : "rfid"}" title="RFID ${esc(u.tag.key)}">◉ ${u.tag.slot ? esc(slotName(u.tag.slot[0], u.tag.slot[1])) : "Tag"}</span>` : ""}
+      <span class="umeta">${u.tag ? `<button type="button" class="tag ${u.tag.in_ams ? "ams" : "rfid"} tagbtn" data-ua="tag" title="RFID ${esc(u.tag.key)} – Klick: anderen Tag zuordnen">◉ ${u.tag.slot ? esc(slotName(u.tag.slot[0], u.tag.slot[1])) : "Tag"}</button>`
+          : u.status !== "empty" ? `<button type="button" class="tag tagbtn add" data-ua="tag" title="RFID-Tag dieser Box zuordnen">◉ + Tag</button>` : ""}
         ${since ? `<small class="${d ? (d.state === "due" ? "err" : "warnc") : "muted"}">${esc(since)}${d ? " – trocknen empfohlen" : ""}</small>` : ""}
         ${u.price ? `<small class="muted">${fmtMoney(u.price)}</small>` : ""}</span>
       <span class="uacts">
@@ -123,6 +124,7 @@ $("#unitList").addEventListener("click", async e => {
   const b = e.target.closest("[data-ua]"); if (!b) return;
   const uid = +b.closest(".unitrow").dataset.uid, a = b.dataset.ua;
   const u = editing.units.find(x => x.id === uid);
+  if (a === "tag") return pickTagFor(u);
   if (a === "weigh") return openWeigh(u, editing);
   if (a === "label") return openLabels({ units: [uid] });
   if (a === "del" && !confirm(`Spule ${u.code} löschen? (Für aufgebrauchte Spulen besser „leer“.)`)) return;
@@ -522,9 +524,21 @@ window.on3dmNfc = async d => {
     const t = state.rfid.find(x => x.key === r.key) || { key: r.key };
     if ($("#scanDlg").open && t.unit_id) return handleScan(`/s/${t.unit_id}`);   // Inventur per NFC
     if ($("#scanDlg").open && t.filament_ref) return handleScan(`/f/${t.filament_ref}`);
+    if (filDlg.open && editing) return nfcToOpenFil(t);
     nfcLast = { t, d, r }; renderNfc();
   } catch (e) { toast("NFC: " + e.message); }
 };
+async function nfcToOpenFil(t) {
+  if (t.filament_ref === editing.id) { toast(`Tag ${shortKey(t.key)} gehört schon zu ${editing.color_name}`); return flashTag(t.key); }
+  const other = t.filament_ref ? state.fil.find(x => x.id === t.filament_ref) : null;
+  if (other && !confirm(`Tag ${shortKey(t.key)} gehört zu „${other.color_name}“ (${other.material}). Zu „${editing.color_name}“ umhängen?`)) return;
+  await linkTag(t.key, editing.id);
+  editing = state.fil.find(f => f.id === editing.id); renderRfidBox(); renderUnits(editing); flashTag(t.key);
+}
+function flashTag(key) {
+  const row = [...document.querySelectorAll("#rfidList .rfidrow")].find(r => r.dataset.key === key);
+  row?.classList.add("flash"); row?.scrollIntoView({ block: "center" });
+}
 window.on3dmBack = () => {
   const open = [...document.querySelectorAll("dialog[open]")];
   if (open.length) { open[open.length - 1].close(); return true; }
